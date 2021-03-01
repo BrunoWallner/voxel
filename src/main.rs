@@ -81,13 +81,15 @@ pub fn main() {
             }
         }
 
-        //resets acceleration
+        //friction Physics simulation
         if ship_acceleration[0] != 0.0 {ship_acceleration[0] /= 1.025}
         if ship_acceleration[1] != 0.0 {ship_acceleration[1] /= 1.025}
 
         let ship: sdl2::rect::Rect = Rect::new(ship_position[0], ship_position[1], ship_size[0], ship_size[1]);
 
-        canvas.fill_rect(ship);
+        if canvas.fill_rect(ship) != Ok(()) {
+            panic!("Failed to draw ship")
+        }
 
         canvas.present();
         sleep(1000 / 60);
@@ -95,7 +97,6 @@ pub fn main() {
 }
 
 use std::{thread, time};
-use std::io::stdin;
 
 pub fn sleep(millis: u64) {
     let duration = time::Duration::from_millis(millis);
