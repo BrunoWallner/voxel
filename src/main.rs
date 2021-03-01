@@ -12,7 +12,6 @@ struct Vertex {
 }
 implement_vertex!(Vertex, position);
 
- 
 pub fn main() {
     let window_size: [u32; 2] = [1200, 800];
     
@@ -43,22 +42,14 @@ pub fn main() {
             color = vec4(1.0, 1.0, 1.0, 1.0);
         }
     "#;
-    let ship_uniform = uniform! {
-        matrix: [
-            [1.0, 0.0, 0.0, 0.0], //rotation
-            [0.0, 1.0, 0.0, 0.0], //scale
-            [0.0, 0.0, 0.5, 0.0], //IDK
-            [0.0, 0.0, 0.0, 1.0f32], //position
-        ]
-    };
 
     let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
     let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
     let ship_speed: f32 = 7.5;
-    let ship_size: [u32; 2] = [1, 1];
+    let ship_size: [f32; 2] = [0.2, 0.2];
     let mut ship_acceleration: [f32; 2] = [0.0, 0.0]; 
-    let mut ship_position: [f32; 2] = [575.0, 725.0];
+    let mut ship_position: [f32; 2] = [0.0, -0.2];
 
     event_loop.run(move |ev, _, control_flow| {
         match ev {
@@ -78,7 +69,7 @@ pub fn main() {
         //accelerates ship
         let ship_bounce_back: f32 = 5.0;
         if ship_acceleration[0] < 0.0 {
-            if ship_position[0] > 0.0 {
+            if ship_position[0] > -1.0 {
                 ship_position[0] += ship_acceleration[0];
             }
             else {
@@ -86,7 +77,7 @@ pub fn main() {
             }
         }
         else {
-            if ship_position[0] < (window_size[0] - ship_size[0]) as f32 {
+            if ship_position[0] < 1.0 {
                 ship_position[0] += ship_acceleration[0];
             }
             else {
@@ -95,7 +86,7 @@ pub fn main() {
         }
 
         if ship_acceleration[1] < 0.0 {
-            if ship_position[1] > 0.0 {
+            if ship_position[1] > -1.0 {
                 ship_position[1] += ship_acceleration[1];
             }
             else {
@@ -103,7 +94,7 @@ pub fn main() {
             }
         }
         else {
-            if ship_position[1] < (window_size[1] - ship_size[1]) as f32 {
+            if ship_position[1] < 1.0{
                 ship_position[1] += ship_acceleration[1];
             }
             else {
@@ -115,8 +106,22 @@ pub fn main() {
         if ship_acceleration[0] != 0.0 {ship_acceleration[0] /= 1.025}
         if ship_acceleration[1] != 0.0 {ship_acceleration[1] /= 1.025}
 
-        //let ship = Triangle::new([ship_position[0], ship_position[1] + (ship_size[0] / 2) as f32], [ship_position[0] - (ship_size[0] / 2) as f32, ship_position[1] - (ship_size[1] / 2) as f32], [ship_position[0] + (ship_size[0] / 2) as f32, ship_position[1] + (ship_size[1] / 2) as f32]);
-        let ship = Triangle::new([0.0, (ship_size[1] as f32 / 2.0) as f32], [-(ship_size[0] as f32 / 2.0), -(ship_size[1] as f32 / 2.0)], [ship_size[0] as f32 / 2.0, -(ship_size[1] as f32 / 2.0)]);
+        let ship_vec1: [f32; 2] = [0.0, (ship_size[1] / 2.0)];
+        let ship_vec2: [f32; 2] = [-(ship_size[0] / 2.0), -(ship_size[1] / 2.0)];
+        let ship_vec3: [f32; 2] = [ship_size[0] / 2.0, -(ship_size[1] / 2.0)];
+
+        let ship_uniform = uniform! {
+            matrix: [
+                [1.0, 0.0, 0.0, 0.0], //rotation
+                [0.0, 1.0, 0.0, 0.0], //scale
+                [0.0, 0.0, 0.5, 0.0], //IDK
+                [ship_position[0], ship_position[1], 0.0, 1.0f32], //position
+            ]
+        };
+
+        ship_acceleration[0] = 0.0001; //debug
+
+        let ship = Triangle::new(ship_vec1, ship_vec2, ship_vec3);
         let ship_vertex_buffer = glium::VertexBuffer::new(&display, &ship).unwrap();
 
         target.draw(&ship_vertex_buffer, &indices, &program, &ship_uniform,

@@ -1,9 +1,4 @@
-use glium::glutin;
-use glium::Surface;
 use glium::implement_vertex;
-use glium::uniform;
-
-
 
 #[derive(Copy, Clone)]
 pub struct Vertex {
@@ -18,16 +13,5 @@ impl Triangle {
         let vertex2 = Vertex { position: [p2[0], p2[1]] };
         let vertex3 = Vertex { position: [p3[0], p3[1]] };
         vec![vertex1, vertex2, vertex3]
-    }
-}
-
-pub struct Square {}
-impl Square {
-    pub fn new(p1: [f32; 2], p2: [f32; 2], p3: [f32; 2], p4: [f32; 2]) -> Vec<Vertex> {
-        let vertex1 = Vertex { position: [p1[0], p1[1]] };
-        let vertex2 = Vertex { position: [p2[0], p2[1]] };
-        let vertex3 = Vertex { position: [p3[0], p3[1]] };
-        let vertex4 = Vertex { position: [p3[0], p3[1]] };
-        vec![vertex1, vertex2, vertex3, vertex4]
     }
 }
