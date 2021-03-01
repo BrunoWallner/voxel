@@ -1,83 +1,113 @@
-use sdl2::pixels::Color;
-use sdl2::event::Event;
-use sdl2::keyboard::Keycode;
-use sdl2::rect::Rect;
+use glium::glutin;
+use glium::Surface;
+use glium::implement_vertex;
+use glium::uniform;
+
+mod shape;
+use shape::Triangle;
+
+#[derive(Copy, Clone)]
+struct Vertex {
+    position: [f32; 2],
+}
+implement_vertex!(Vertex, position);
+
  
 pub fn main() {
-    let sdl_context = sdl2::init().unwrap();
-    let video_subsystem = sdl_context.video().unwrap();
-    
     let window_size: [u32; 2] = [1200, 800];
-    let window = video_subsystem.window("Space Shooter", window_size[0], window_size[1])
-        .position_centered()
-        .build()
-        .unwrap();
- 
-    let mut canvas = window.into_canvas().build().unwrap();
- 
-    canvas.set_draw_color(Color::RGB(0, 255, 255));
-    canvas.clear();
-    canvas.present();
-    let mut event_pump = sdl_context.event_pump().unwrap();
+    
+    let event_loop = glutin::event_loop::EventLoop::new();
+    let wb = glutin::window::WindowBuilder::new();
+    let cb = glutin::ContextBuilder::new();
+    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
+
+    //shaders
+    let vertex_shader_src = r#"
+        #version 140
+
+        in vec2 position;
+
+        uniform mat4 matrix;
+
+        void main() {
+            gl_Position = matrix * vec4(position, 0.0, 1.0);
+        }
+    "#;
+
+    let fragment_shader_src = r#"
+        #version 140
+
+        out vec4 color;
+
+        void main() {
+            color = vec4(1.0, 1.0, 1.0, 1.0);
+        }
+    "#;
+    let ship_uniform = uniform! {
+        matrix: [
+            [1.0, 0.0, 0.0, 0.0], //rotation
+            [0.0, 1.0, 0.0, 0.0], //scale
+            [0.0, 0.0, 0.5, 0.0], //IDK
+            [0.0, 0.0, 0.0, 1.0f32], //position
+        ]
+    };
+
+    let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
+    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
 
     let ship_speed: f32 = 7.5;
-    let ship_size: [u32; 2] = [50, 50];
+    let ship_size: [u32; 2] = [1, 1];
     let mut ship_acceleration: [f32; 2] = [0.0, 0.0]; 
-    let mut ship_position: [i32; 2] = [575, 725];
+    let mut ship_position: [f32; 2] = [575.0, 725.0];
 
-    'running: loop {
-        canvas.set_draw_color(Color::RGB(0, 0, 0));
-        canvas.clear();
-
-        //player input
-        for event in event_pump.poll_iter() {
-            match event {
-                Event::KeyDown { keycode: Some(Keycode::Escape), .. } => break 'running ,
-                Event::Quit {..} => break 'running,
-
-                Event::KeyDown { keycode: Some(Keycode::W), .. } => if ship_acceleration[1] > -25.0 {ship_acceleration[1] -= ship_speed},
-                Event::KeyDown { keycode: Some(Keycode::A), .. } => if ship_acceleration[0] > -25.0 {ship_acceleration[0] -= ship_speed},
-                Event::KeyDown { keycode: Some(Keycode::S), .. } => if ship_acceleration[1] < 25.0 {ship_acceleration[1] += ship_speed},
-                Event::KeyDown { keycode: Some(Keycode::D), .. } => if ship_acceleration[0] < 25.0 {ship_acceleration[0] += ship_speed},
-                _ => {}
-            }
+    event_loop.run(move |ev, _, control_flow| {
+        match ev {
+            glutin::event::Event::WindowEvent { event, .. } => match event {
+                glutin::event::WindowEvent::CloseRequested => {
+                    *control_flow = glutin::event_loop::ControlFlow::Exit;
+                    return;
+                },
+                _ => return,
+            },
+            _ => (),
         }
 
-        //draws ship
-        canvas.set_draw_color(Color::RGB(255, 0, 0));
+        let mut target = display.draw();
+        target.clear_color(0.0, 0.0, 0.0, 1.0);
 
         //accelerates ship
+        let ship_bounce_back: f32 = 5.0;
         if ship_acceleration[0] < 0.0 {
-            if ship_position[0] > 0 {
-                ship_position[0] += ship_acceleration[0] as i32;
+            if ship_position[0] > 0.0 {
+                ship_position[0] += ship_acceleration[0];
             }
             else {
-                ship_acceleration[0] = 5.0;
+                ship_acceleration[0] = ship_bounce_back;
             }
         }
         else {
-            if ship_position[0] < (window_size[0] - ship_size[0]) as i32 {
-                ship_position[0] += ship_acceleration[0] as i32;
+            if ship_position[0] < (window_size[0] - ship_size[0]) as f32 {
+                ship_position[0] += ship_acceleration[0];
             }
             else {
-                ship_acceleration[0] = -5.0;
+                ship_acceleration[0] = -ship_bounce_back
             }
         }
 
         if ship_acceleration[1] < 0.0 {
-            if ship_position[1] > 0 {
-                ship_position[1] += ship_acceleration[1] as i32;
+            if ship_position[1] > 0.0 {
+                ship_position[1] += ship_acceleration[1];
             }
             else {
-                ship_acceleration[1] = 5.0;
+                ship_acceleration[1] = ship_bounce_back;
             }
         }
         else {
-            if ship_position[1] < (window_size[1] - ship_size[1]) as i32 {
-                ship_position[1] += ship_acceleration[1] as i32;
+            if ship_position[1] < (window_size[1] - ship_size[1]) as f32 {
+                ship_position[1] += ship_acceleration[1];
             }
             else {
-                ship_acceleration[1] = -5.0;
+                ship_acceleration[1] = -ship_bounce_back;
             }
         }
 
@@ -85,15 +115,15 @@ pub fn main() {
         if ship_acceleration[0] != 0.0 {ship_acceleration[0] /= 1.025}
         if ship_acceleration[1] != 0.0 {ship_acceleration[1] /= 1.025}
 
-        let ship: sdl2::rect::Rect = Rect::new(ship_position[0], ship_position[1], ship_size[0], ship_size[1]);
+        //let ship = Triangle::new([ship_position[0], ship_position[1] + (ship_size[0] / 2) as f32], [ship_position[0] - (ship_size[0] / 2) as f32, ship_position[1] - (ship_size[1] / 2) as f32], [ship_position[0] + (ship_size[0] / 2) as f32, ship_position[1] + (ship_size[1] / 2) as f32]);
+        let ship = Triangle::new([0.0, (ship_size[1] as f32 / 2.0) as f32], [-(ship_size[0] as f32 / 2.0), -(ship_size[1] as f32 / 2.0)], [ship_size[0] as f32 / 2.0, -(ship_size[1] as f32 / 2.0)]);
+        let ship_vertex_buffer = glium::VertexBuffer::new(&display, &ship).unwrap();
 
-        if canvas.fill_rect(ship) != Ok(()) {
-            panic!("Failed to draw ship")
-        }
+        target.draw(&ship_vertex_buffer, &indices, &program, &ship_uniform,
+        &Default::default()).unwrap();
 
-        canvas.present();
-        sleep(1000 / 60);
-    }
+        target.finish().unwrap();
+    });
 }
 
 use std::{thread, time};
