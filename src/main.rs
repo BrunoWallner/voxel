@@ -10,11 +10,6 @@ struct Rotation {
     angle: f32,
 }
 
-struct Size {
-    width: f32,
-    height: f32,
-}
-
 struct Ship;
 
 
@@ -53,14 +48,12 @@ fn spawn_ship(commands: &mut Commands, texture: Res<Textures>) {
             ..Default::default()
         })
         .with(Ship)
-        .with(Size { width: 16.0, height: 16.0 })
         .with(Rotation { angle: 0.0, speed: 0.1 });
 }
 
 fn ship_movement(
     keyboard_input: Res<Input<KeyCode>>,
     mut ship_position: Query<(&mut Transform, &mut Rotation), With<Ship>>,
-    mut ship_size: Query<(&Size, &mut Sprite), With<Ship>>,
 ) {
     for (mut transform, mut rotation) in ship_position.iter_mut() {
         let move_dir = transform.rotation * Vec3::unit_y();
@@ -81,9 +74,6 @@ fn ship_movement(
 
         //applies rotation
         transform.rotation = Quat::from_rotation_z(rotation.angle);
-    }
-    for (size, mut sprite) in ship_size.iter_mut() {
-        sprite.size = Vec2::new(size.width, size.height);
     }
 }
 
