@@ -5,19 +5,14 @@ struct Textures {
     ship_texture: Handle<TextureAtlas>
 }
 
-struct Position {
-    x: f32,
-    y: f32,
+struct Rotation {
+    speed: f32,
+    angle: f32,
 }
 
 struct Size {
     width: f32,
     height: f32,
-}
-
-struct Speed {
-    x: f32,
-    y: f32,
 }
 
 struct Ship;
@@ -58,33 +53,34 @@ fn spawn_ship(commands: &mut Commands, texture: Res<Textures>) {
             ..Default::default()
         })
         .with(Ship)
-        .with(Position { x: 5.0, y: 3.0 })
         .with(Size { width: 16.0, height: 16.0 })
-        .with(Speed { x: 10.0, y: 10.0 });
+        .with(Rotation { angle: 0.0, speed: 0.1 });
 }
 
 fn ship_movement(
     keyboard_input: Res<Input<KeyCode>>,
-    mut ship_position: Query<(&mut Position, &mut Transform, &Speed), With<Ship>>,
+    mut ship_position: Query<(&mut Transform, &mut Rotation), With<Ship>>,
     mut ship_size: Query<(&Size, &mut Sprite), With<Ship>>,
-    //mut ship_transform: Query<&mut Transform, With<Ship>>,
 ) {
-    for (mut position, mut transform, speed) in ship_position.iter_mut() {
+    for (mut transform, mut rotation) in ship_position.iter_mut() {
+        let move_dir = transform.rotation * Vec3::unit_y();
+        let move_speed = 15.0;
+
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
-            position.x -= speed.x;
+            rotation.angle += rotation.speed;
         }
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
-            position.x += speed.x;
+            rotation.angle -= rotation.speed;
         }
         if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
-            position.y -= speed.y;
+            transform.translation -= move_dir * move_speed;
         }
         if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
-            position.y += speed.y;
+            transform.translation += move_dir * move_speed;
         }
-        //applies transformation
-        transform.translation.x = position.x;
-        transform.translation.y = position.y;
+
+        //applies rotation
+        transform.rotation = Quat::from_rotation_z(rotation.angle);
     }
     for (size, mut sprite) in ship_size.iter_mut() {
         sprite.size = Vec2::new(size.width, size.height);
