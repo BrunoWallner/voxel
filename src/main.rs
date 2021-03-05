@@ -1,11 +1,10 @@
 use bevy::prelude::*;
 use bevy::input::{keyboard::KeyCode, Input};
 
-struct Materials {
-    ship_material: Handle<ColorMaterial>
+struct Textures {
+    ship_texture: Handle<TextureAtlas>
 }
 
-#[derive(Default, Copy, Clone, PartialEq)]
 struct Position {
     x: f32,
     y: f32,
@@ -26,6 +25,7 @@ struct Ship;
 
 pub fn main() {
     App::build()
+        .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_resource(WindowDescriptor { title: "Space Shooter".to_string(), width:1200.0, height: 800.0, ..Default::default() })
         .add_startup_system(setup.system())
         .add_startup_stage("game_setup", SystemStage::single(spawn_ship.system()))
@@ -35,23 +35,31 @@ pub fn main() {
     .run();
 }
 
-fn setup(commands: &mut Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn setup(
+    commands: &mut Commands, 
+    asset_server: Res<AssetServer>,
+    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
+) {
     commands.spawn(Camera2dBundle::default());
-    commands.insert_resource(Materials {
-        ship_material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
+
+    let texture_handle = asset_server.load("textures/ship.png");
+    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 1, 1);
+
+    commands.insert_resource(Textures {
+        ship_texture: texture_atlases.add(texture_atlas),
     });
 }
 
-fn spawn_ship(commands: &mut Commands, materials: Res<Materials>) {
+fn spawn_ship(commands: &mut Commands, texture: Res<Textures>) {
     commands
-        .spawn(SpriteBundle {
-            material: materials.ship_material.clone(),
-            sprite: Sprite::new(Vec2::new(50.0, 50.0)),
+        .spawn(SpriteSheetBundle {
+            texture_atlas: texture.ship_texture.clone(),
+            transform: Transform::from_scale(Vec3::splat(6.0)),
             ..Default::default()
         })
         .with(Ship)
         .with(Position { x: 5.0, y: 3.0 })
-        .with(Size { width: 18.0, height: 25.0 })
+        .with(Size { width: 16.0, height: 16.0 })
         .with(Speed { x: 10.0, y: 10.0 });
 }
 
@@ -62,16 +70,16 @@ fn ship_movement(
     //mut ship_transform: Query<&mut Transform, With<Ship>>,
 ) {
     for (mut position, mut transform, speed) in ship_position.iter_mut() {
-        if keyboard_input.pressed(KeyCode::Left) {
+        if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
             position.x -= speed.x;
         }
-        if keyboard_input.pressed(KeyCode::Right) {
+        if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
             position.x += speed.x;
         }
-        if keyboard_input.pressed(KeyCode::Down) {
+        if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
             position.y -= speed.y;
         }
-        if keyboard_input.pressed(KeyCode::Up) {
+        if keyboard_input.pressed(KeyCode::Up) || keyboard_input.pressed(KeyCode::W) {
             position.y += speed.y;
         }
         //applies transformation
