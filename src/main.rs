@@ -1,139 +1,86 @@
-use glium::glutin;
-use glium::Surface;
-use glium::implement_vertex;
-use glium::uniform;
+use bevy::prelude::*;
+use bevy::input::{keyboard::KeyCode, Input};
 
-mod shape;
-use shape::Triangle;
-
-#[derive(Copy, Clone)]
-struct Vertex {
-    position: [f32; 2],
+struct Materials {
+    ship_material: Handle<ColorMaterial>
 }
-implement_vertex!(Vertex, position);
+
+#[derive(Default, Copy, Clone, PartialEq)]
+struct Position {
+    x: f32,
+    y: f32,
+}
+
+struct Size {
+    width: f32,
+    height: f32,
+}
+
+struct Speed {
+    x: f32,
+    y: f32,
+}
+
+struct Ship;
+
 
 pub fn main() {
-    let window_size: [u32; 2] = [1200, 800];
+    App::build()
+        .add_resource(WindowDescriptor { title: "Space Shooter".to_string(), width:1200.0, height: 800.0, ..Default::default() })
+        .add_startup_system(setup.system())
+        .add_startup_stage("game_setup", SystemStage::single(spawn_ship.system()))
+        .add_system(ship_movement.system())
+        .add_plugins(DefaultPlugins)
     
-    let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new();
-    let cb = glutin::ContextBuilder::new();
-    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
+    .run();
+}
 
-    //shaders
-    let vertex_shader_src = r#"
-        #version 140
-
-        in vec2 position;
-
-        uniform mat4 matrix;
-
-        void main() {
-            gl_Position = matrix * vec4(position, 0.0, 1.0);
-        }
-    "#;
-
-    let fragment_shader_src = r#"
-        #version 140
-
-        out vec4 color;
-
-        void main() {
-            color = vec4(1.0, 1.0, 1.0, 1.0);
-        }
-    "#;
-
-    let program = glium::Program::from_source(&display, vertex_shader_src, fragment_shader_src, None).unwrap();
-    let indices = glium::index::NoIndices(glium::index::PrimitiveType::TrianglesList);
-
-    let ship_speed: f32 = 7.5;
-    let ship_size: [f32; 2] = [0.2, 0.2];
-    let mut ship_acceleration: [f32; 2] = [0.0, 0.0]; 
-    let mut ship_position: [f32; 2] = [0.0, -0.2];
-
-    event_loop.run(move |ev, _, control_flow| {
-        match ev {
-            glutin::event::Event::WindowEvent { event, .. } => match event {
-                glutin::event::WindowEvent::CloseRequested => {
-                    *control_flow = glutin::event_loop::ControlFlow::Exit;
-                    return;
-                },
-                _ => return,
-            },
-            _ => (),
-        }
-
-        let mut target = display.draw();
-        target.clear_color(0.0, 0.0, 0.0, 1.0);
-
-        //accelerates ship
-        let ship_bounce_back: f32 = 5.0;
-        if ship_acceleration[0] < 0.0 {
-            if ship_position[0] > -1.0 {
-                ship_position[0] += ship_acceleration[0];
-            }
-            else {
-                ship_acceleration[0] = ship_bounce_back;
-            }
-        }
-        else {
-            if ship_position[0] < 1.0 {
-                ship_position[0] += ship_acceleration[0];
-            }
-            else {
-                ship_acceleration[0] = -ship_bounce_back
-            }
-        }
-
-        if ship_acceleration[1] < 0.0 {
-            if ship_position[1] > -1.0 {
-                ship_position[1] += ship_acceleration[1];
-            }
-            else {
-                ship_acceleration[1] = ship_bounce_back;
-            }
-        }
-        else {
-            if ship_position[1] < 1.0{
-                ship_position[1] += ship_acceleration[1];
-            }
-            else {
-                ship_acceleration[1] = -ship_bounce_back;
-            }
-        }
-
-        //friction Physics simulation
-        if ship_acceleration[0] != 0.0 {ship_acceleration[0] /= 1.025}
-        if ship_acceleration[1] != 0.0 {ship_acceleration[1] /= 1.025}
-
-        let ship_vec1: [f32; 2] = [0.0, (ship_size[1] / 2.0)];
-        let ship_vec2: [f32; 2] = [-(ship_size[0] / 2.0), -(ship_size[1] / 2.0)];
-        let ship_vec3: [f32; 2] = [ship_size[0] / 2.0, -(ship_size[1] / 2.0)];
-
-        let ship_uniform = uniform! {
-            matrix: [
-                [1.0, 0.0, 0.0, 0.0], //rotation
-                [0.0, 1.0, 0.0, 0.0], //scale
-                [0.0, 0.0, 0.5, 0.0], //IDK
-                [ship_position[0], ship_position[1], 0.0, 1.0f32], //position
-            ]
-        };
-
-        ship_acceleration[0] = 0.0001; //debug
-
-        let ship = Triangle::new(ship_vec1, ship_vec2, ship_vec3);
-        let ship_vertex_buffer = glium::VertexBuffer::new(&display, &ship).unwrap();
-
-        target.draw(&ship_vertex_buffer, &indices, &program, &ship_uniform,
-        &Default::default()).unwrap();
-
-        target.finish().unwrap();
+fn setup(commands: &mut Commands, mut materials: ResMut<Assets<ColorMaterial>>) {
+    commands.spawn(Camera2dBundle::default());
+    commands.insert_resource(Materials {
+        ship_material: materials.add(Color::rgb(1.0, 0.0, 0.0).into()),
     });
 }
 
-use std::{thread, time};
-
-pub fn sleep(millis: u64) {
-    let duration = time::Duration::from_millis(millis);
-    thread::sleep(duration);
+fn spawn_ship(commands: &mut Commands, materials: Res<Materials>) {
+    commands
+        .spawn(SpriteBundle {
+            material: materials.ship_material.clone(),
+            sprite: Sprite::new(Vec2::new(50.0, 50.0)),
+            ..Default::default()
+        })
+        .with(Ship)
+        .with(Position { x: 5.0, y: 3.0 })
+        .with(Size { width: 18.0, height: 25.0 })
+        .with(Speed { x: 10.0, y: 10.0 });
 }
+
+fn ship_movement(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut ship_position: Query<(&mut Position, &mut Transform, &Speed), With<Ship>>,
+    mut ship_size: Query<(&Size, &mut Sprite), With<Ship>>,
+    //mut ship_transform: Query<&mut Transform, With<Ship>>,
+) {
+    for (mut position, mut transform, speed) in ship_position.iter_mut() {
+        if keyboard_input.pressed(KeyCode::Left) {
+            position.x -= speed.x;
+        }
+        if keyboard_input.pressed(KeyCode::Right) {
+            position.x += speed.x;
+        }
+        if keyboard_input.pressed(KeyCode::Down) {
+            position.y -= speed.y;
+        }
+        if keyboard_input.pressed(KeyCode::Up) {
+            position.y += speed.y;
+        }
+        //applies transformation
+        transform.translation.x = position.x;
+        transform.translation.y = position.y;
+    }
+    for (size, mut sprite) in ship_size.iter_mut() {
+        sprite.size = Vec2::new(size.width, size.height);
+    }
+}
+
+
