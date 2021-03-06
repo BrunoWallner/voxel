@@ -2,7 +2,8 @@ use bevy::prelude::*;
 use bevy::input::{keyboard::KeyCode, Input};
 
 struct Textures {
-    ship_texture: Handle<TextureAtlas>
+    ship_texture: Handle<TextureAtlas>,
+    background_texture: Handle<TextureAtlas>,
 }
 
 struct Rotation {
@@ -11,6 +12,7 @@ struct Rotation {
 }
 
 struct Ship;
+struct Background;
 
 
 pub fn main() {
@@ -18,7 +20,11 @@ pub fn main() {
         .add_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
         .add_resource(WindowDescriptor { title: "Space Shooter".to_string(), width:1200.0, height: 800.0, ..Default::default() })
         .add_startup_system(setup.system())
-        .add_startup_stage("game_setup", SystemStage::single(spawn_ship.system()))
+
+        .add_startup_stage("object_spawn", SystemStage::parallel())
+        .add_startup_system_to_stage("object_spawn", spawn_background.system())
+        .add_startup_system_to_stage("object_spawn", spawn_ship.system())
+
         .add_system(ship_movement.system())
         .add_plugins(DefaultPlugins)
     
@@ -32,11 +38,15 @@ fn setup(
 ) {
     commands.spawn(Camera2dBundle::default());
 
-    let texture_handle = asset_server.load("textures/ship.png");
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(16.0, 16.0), 1, 1);
+    let ship_texture_handle = asset_server.load("textures/ship.png");
+    let ship_texture_atlas = TextureAtlas::from_grid(ship_texture_handle, Vec2::new(16.0, 16.0), 1, 1);
+
+    let background_texture_handle = asset_server.load("textures/background.png");
+    let background_texture_atlas = TextureAtlas::from_grid(background_texture_handle, Vec2::new(1000.0, 1000.0), 1, 1);
 
     commands.insert_resource(Textures {
-        ship_texture: texture_atlases.add(texture_atlas),
+        ship_texture: texture_atlases.add(ship_texture_atlas),
+        background_texture: texture_atlases.add(background_texture_atlas),
     });
 }
 
@@ -76,5 +86,16 @@ fn ship_movement(
         transform.rotation = Quat::from_rotation_z(rotation.angle);
     }
 }
+
+fn spawn_background(commands: &mut Commands, texture: Res<Textures>) {
+    commands
+        .spawn(SpriteSheetBundle {
+            texture_atlas: texture.background_texture.clone(),
+            transform: Transform::from_scale(Vec3::splat(20.0)),
+            ..Default::default()
+        })
+        .with(Background);
+}
+
 
 
