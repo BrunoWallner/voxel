@@ -13,7 +13,7 @@ struct Rotation {
 }
 
 struct ShipEvent {
-    pub status: String,
+    pub dead: bool,
 }
 
 struct Ship;
@@ -134,11 +134,11 @@ fn collision_detection(
 ) {
     for comet in comets.iter() {
         for ship in ships.iter() {
-            if comet.translation.x < ship.translation.x + 0.5 && comet.translation.y < ship.translation.y + 0.5 
-            && comet.translation.x > ship.translation.x - 0.5 && comet.translation.y > ship.translation.y - 0.5 {
+            if comet.translation.x < ship.translation.x + 80.0 && comet.translation.y < ship.translation.y + 80.0
+            && comet.translation.x > ship.translation.x - 80.0 && comet.translation.y > ship.translation.y - 80.0 {
                 events.send(ShipEvent {
-                    status: "dead".to_string(),
-                })
+                    dead: true,
+                });
             }
         }
     }
