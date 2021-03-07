@@ -4,8 +4,6 @@ use bevy::input::{keyboard::KeyCode, Input};
 struct Textures {
     ship_texture: Handle<TextureAtlas>,
     background_texture: Handle<TextureAtlas>,
-    background_low_texture: Handle<TextureAtlas>,
-    background_med_texture: Handle<TextureAtlas>,
     comet_texture: Handle<TextureAtlas>,
 }
 
@@ -21,7 +19,6 @@ struct ShipEvent {
 struct Ship;
 struct Background;
 struct Camera;
-struct Dummy;
 struct Comet;
 
 pub fn main() {
@@ -41,8 +38,6 @@ pub fn main() {
         .add_system(camera_follow.system())
         .add_system(ship_movement.system())
         .add_system(collision_detection.system())
-
-        .add_system(despawn_dummys.system())
 
         .add_plugins(DefaultPlugins)
     
@@ -65,17 +60,9 @@ fn setup(
     let background_texture_handle = asset_server.load("textures/background.png");
     let background_texture_atlas = TextureAtlas::from_grid(background_texture_handle, Vec2::new(1000.0, 1000.0), 1, 1);
 
-    let background_low_texture_handle = asset_server.load("textures/background_low.png");
-    let background_low_texture_atlas = TextureAtlas::from_grid(background_low_texture_handle, Vec2::new(1000.0, 1000.0), 1, 1);
-
-    let background_med_texture_handle = asset_server.load("textures/background_med.png");
-    let background_med_texture_atlas = TextureAtlas::from_grid(background_med_texture_handle, Vec2::new(1000.0, 1000.0), 1, 1);
-
     commands.insert_resource(Textures {
         ship_texture: texture_atlases.add(ship_texture_atlas),
         background_texture: texture_atlases.add(background_texture_atlas),
-        background_low_texture: texture_atlases.add(background_low_texture_atlas),
-        background_med_texture: texture_atlases.add(background_med_texture_atlas),
         comet_texture: texture_atlases.add(comet_texture_atlas),
     });
 }
@@ -118,24 +105,6 @@ fn ship_movement(
 }
 
 fn spawn_background(commands: &mut Commands, texture: Res<Textures>) {
-    commands
-        .spawn(SpriteSheetBundle {
-            texture_atlas: texture.background_low_texture.clone(),
-            transform: Transform::from_scale(Vec3::splat(10.0)),
-            ..Default::default()
-        })
-        .with(Dummy)
-        .with(Background);
-
-    commands
-        .spawn(SpriteSheetBundle {
-            texture_atlas: texture.background_med_texture.clone(),
-            transform: Transform::from_scale(Vec3::splat(10.0)),
-            ..Default::default()
-        })
-        .with(Dummy)
-        .with(Background);
-
     commands
         .spawn(SpriteSheetBundle {
             texture_atlas: texture.background_texture.clone(),
@@ -198,12 +167,57 @@ fn camera_follow(
     }
 }
 
-fn despawn_dummys(
-    commands: &mut Commands,
-    dummys: Query<&Entity, With<Dummy>>
-) {
-    for dummy in dummys.iter() {
-        commands.despawn(*dummy);
+
+/*
+
+use bevy::prelude::*;
+
+/// This example creates a new event, a system that triggers the event once per second,
+/// and a system that prints a message whenever the event is received.
+fn main() {
+    App::build()
+        .add_plugins(DefaultPlugins)
+        .add_event::<MyEvent>()
+        .init_resource::<EventTriggerState>()
+        .add_system(event_trigger_system.system())
+        .add_system(event_listener_system.system())
+        .run();
+}
+
+struct MyEvent {
+    pub message: String,
+}
+
+struct EventTriggerState {
+    event_timer: Timer,
+}
+
+impl Default for EventTriggerState {
+    fn default() -> Self {
+        EventTriggerState {
+            event_timer: Timer::from_seconds(1.0, true),
+        }
     }
 }
+
+// sends MyEvent every second
+fn event_trigger_system(
+    time: Res<Time>,
+    mut state: ResMut<EventTriggerState>,
+    mut my_events: ResMut<Events<MyEvent>>,
+) {
+    if state.event_timer.tick(time.delta_seconds()).finished() {
+        my_events.send(MyEvent {
+            message: "MyEvent just happened!".to_string(),
+        });
+    }
+}
+
+// prints events as they come in
+fn event_listener_system(mut events: EventReader<MyEvent>) {
+    for my_event in events.iter() {
+        println!("{}", my_event.message);
+    }
+}
+*/
 
