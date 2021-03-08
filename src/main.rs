@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use bevy::input::{keyboard::KeyCode, Input};
 
+use rand::Rng;
+
 struct Textures {
     ship_texture: Handle<TextureAtlas>,
     background_layer1_texture: Handle<TextureAtlas>,
@@ -10,8 +12,12 @@ struct Textures {
 }
 
 struct Rotation {
-    speed: f32,
     angle: f32,
+}
+
+struct Position {
+    x: i32,
+    y: i32,
 }
 
 struct Layer {
@@ -37,7 +43,6 @@ pub fn main() {
         .add_startup_system_to_stage("object_spawn", spawn_background.system())
         .add_startup_system_to_stage("object_spawn", spawn_comets.system())
         .add_startup_system_to_stage("object_spawn", spawn_ship.system())
-        .add_startup_system_to_stage("object_spawn", spawn_foreground.system())
 
         .add_event::<ShipEvent>()
 
@@ -45,6 +50,7 @@ pub fn main() {
         .add_system(camera_follow.system())
         .add_system(ship_movement.system())
         .add_system(collision_detection.system())
+        .add_system(allign_comets.system())
 
         .add_plugins(DefaultPlugins)
     
@@ -90,7 +96,7 @@ fn spawn_ship(commands: &mut Commands, texture: Res<Textures>) {
             ..Default::default()
         })
         .with(Ship)
-        .with(Rotation { angle: 0.0, speed: 0.1 });
+        .with(Rotation { angle: 0.0 });
 }
 
 fn ship_movement(
@@ -100,12 +106,13 @@ fn ship_movement(
     for (mut transform, mut rotation) in ship_position.iter_mut() {
         let move_dir = transform.rotation * Vec3::unit_y();
         let move_speed = 15.0;
+        let rotation_speed = 0.1;
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
-            rotation.angle += rotation.speed;
+            rotation.angle += rotation_speed;
         }
         if keyboard_input.pressed(KeyCode::Right) || keyboard_input.pressed(KeyCode::D) {
-            rotation.angle -= rotation.speed;
+            rotation.angle -= rotation_speed;
         }
         if keyboard_input.pressed(KeyCode::Down) || keyboard_input.pressed(KeyCode::S) {
             transform.translation -= move_dir * move_speed;
@@ -137,13 +144,11 @@ fn spawn_background(commands: &mut Commands, texture: Res<Textures>) {
         })
         .with(Background)
         .with(Layer { value: 2 });
-}
-
-fn spawn_foreground(commands: &mut Commands, texture: Res<Textures>) {
+    
     commands
         .spawn(SpriteSheetBundle {
             texture_atlas: texture.background_layer3_texture.clone(),
-            transform: Transform::from_scale(Vec3::splat(10.0)),
+            transform: Transform::from_scale(Vec3::splat(12.5)),
             ..Default::default()
         })
         .with(Background)
@@ -154,13 +159,28 @@ fn spawn_comets(
     commands: &mut Commands,
     texture: Res<Textures>,
 ) {
-    commands
-        .spawn(SpriteSheetBundle {
-            texture_atlas: texture.comet_texture.clone(),
-            transform: Transform::from_scale(Vec3::splat(2.0)),
-            ..Default::default()
-        })
-        .with(Comet);
+    let mut rng = rand::thread_rng();
+    for _z in 1 .. 2000 { //2000 = number of comets
+        let x = rng.gen_range(-25000 .. 25000);
+        let y = rng.gen_range(-25000 .. 25000);
+        commands
+            .spawn(SpriteSheetBundle {
+                texture_atlas: texture.comet_texture.clone(),
+                transform: Transform::from_scale(Vec3::splat(2.0)),
+                ..Default::default()
+            })
+            .with(Comet)
+            .with(Position { x: x, y: y });
+    }
+}
+
+fn allign_comets(
+    mut comets: Query<(&mut Transform, &Position), With<Comet>>,
+) {
+    for (mut comet, position) in comets.iter_mut() {
+        comet.translation.x = position.x as f32;
+        comet.translation.y = position.y as f32;
+    }
 }
 
 fn collision_detection(
@@ -196,8 +216,8 @@ fn parralax_scrolling(
             }
 
             if layer.value == 3 {
-                background.translation.x = ship.translation.x / 1.75;
-                background.translation.y = ship.translation.y / 1.75;
+                background.translation.x = ship.translation.x / 2.0;
+                background.translation.y = ship.translation.y / 2.0;
             }
         }
     }
