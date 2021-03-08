@@ -3,13 +3,19 @@ use bevy::input::{keyboard::KeyCode, Input};
 
 struct Textures {
     ship_texture: Handle<TextureAtlas>,
-    background_texture: Handle<TextureAtlas>,
+    background_layer1_texture: Handle<TextureAtlas>,
+    background_layer2_texture: Handle<TextureAtlas>,
+    background_layer3_texture: Handle<TextureAtlas>,
     comet_texture: Handle<TextureAtlas>,
 }
 
 struct Rotation {
     speed: f32,
     angle: f32,
+}
+
+struct Layer {
+    value: u32,
 }
 
 struct ShipEvent {
@@ -31,6 +37,7 @@ pub fn main() {
         .add_startup_system_to_stage("object_spawn", spawn_background.system())
         .add_startup_system_to_stage("object_spawn", spawn_ship.system())
         .add_startup_system_to_stage("object_spawn", spawn_comets.system())
+        .add_startup_system_to_stage("object_spawn", spawn_foreground.system())
 
         .add_event::<ShipEvent>()
 
@@ -57,12 +64,20 @@ fn setup(
     let comet_texture_handle = asset_server.load("textures/comet.png");
     let comet_texture_atlas = TextureAtlas::from_grid(comet_texture_handle, Vec2::new(50.0, 50.0), 1, 1);
 
-    let background_texture_handle = asset_server.load("textures/background.png");
-    let background_texture_atlas = TextureAtlas::from_grid(background_texture_handle, Vec2::new(1000.0, 1000.0), 1, 1);
+    let background_layer1_texture_handle = asset_server.load("textures/background_layer1.png");
+    let background_layer1_texture_atlas = TextureAtlas::from_grid(background_layer1_texture_handle, Vec2::new(2500.0, 2500.0), 1, 1);
+
+    let background_layer2_texture_handle = asset_server.load("textures/background_layer2.png");
+    let background_layer2_texture_atlas = TextureAtlas::from_grid(background_layer2_texture_handle, Vec2::new(2500.0, 2500.0), 1, 1);
+
+    let background_layer3_texture_handle = asset_server.load("textures/background_layer3.png");
+    let background_layer3_texture_atlas = TextureAtlas::from_grid(background_layer3_texture_handle, Vec2::new(2500.0, 2500.0), 1, 1);
 
     commands.insert_resource(Textures {
         ship_texture: texture_atlases.add(ship_texture_atlas),
-        background_texture: texture_atlases.add(background_texture_atlas),
+        background_layer1_texture: texture_atlases.add(background_layer1_texture_atlas),
+        background_layer2_texture: texture_atlases.add(background_layer2_texture_atlas),
+        background_layer3_texture: texture_atlases.add(background_layer3_texture_atlas),
         comet_texture: texture_atlases.add(comet_texture_atlas),
     });
 }
@@ -107,11 +122,32 @@ fn ship_movement(
 fn spawn_background(commands: &mut Commands, texture: Res<Textures>) {
     commands
         .spawn(SpriteSheetBundle {
-            texture_atlas: texture.background_texture.clone(),
+            texture_atlas: texture.background_layer1_texture.clone(),
+            transform: Transform::from_scale(Vec3::splat(5.0)),
+            ..Default::default()
+        })
+        .with(Background)
+        .with(Layer { value: 1});
+
+    commands
+        .spawn(SpriteSheetBundle {
+            texture_atlas: texture.background_layer2_texture.clone(),
+            transform: Transform::from_scale(Vec3::splat(7.5)),
+            ..Default::default()
+        })
+        .with(Background)
+        .with(Layer { value: 2 });
+}
+
+fn spawn_foreground(commands: &mut Commands, texture: Res<Textures>) {
+    commands
+        .spawn(SpriteSheetBundle {
+            texture_atlas: texture.background_layer3_texture.clone(),
             transform: Transform::from_scale(Vec3::splat(10.0)),
             ..Default::default()
         })
-        .with(Background);
+        .with(Background)
+        .with(Layer { value: 3 });
 }
 
 fn spawn_comets(
@@ -146,12 +182,23 @@ fn collision_detection(
 
 fn parralax_scrolling(
     ship_position: Query<&Transform, With<Ship>>,
-    mut background_position: Query<&mut Transform, With<Background>>
+    mut background_position: Query<(&mut Transform, &Layer), With<Background>>
 ) {
     for ship in ship_position.iter() {
-        for mut background in background_position.iter_mut() {
-            background.translation.x = ship.translation.x / 1.25;
-            background.translation.y = ship.translation.y / 1.25;
+        for (mut background, layer) in background_position.iter_mut() {
+            if layer.value == 1 {
+                background.translation.x = ship.translation.x / 1.25;
+                background.translation.y = ship.translation.y / 1.25;
+            }
+            if layer.value == 2 {
+                background.translation.x = ship.translation.x / 1.5;
+                background.translation.y = ship.translation.y / 1.5;
+            }
+
+            if layer.value == 3 {
+                background.translation.x = ship.translation.x / 1.75;
+                background.translation.y = ship.translation.y / 1.75;
+            }
         }
     }
 }
@@ -166,6 +213,7 @@ fn camera_follow(
         }
     }
 }
+
 
 
 /*
