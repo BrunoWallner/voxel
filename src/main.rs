@@ -35,8 +35,8 @@ pub fn main() {
 
         .add_startup_stage_after("setup", "object_spawn", SystemStage::serial())
         .add_startup_system_to_stage("object_spawn", spawn_background.system())
-        .add_startup_system_to_stage("object_spawn", spawn_ship.system())
         .add_startup_system_to_stage("object_spawn", spawn_comets.system())
+        .add_startup_system_to_stage("object_spawn", spawn_ship.system())
         .add_startup_system_to_stage("object_spawn", spawn_foreground.system())
 
         .add_event::<ShipEvent>()
@@ -213,7 +213,6 @@ fn camera_follow(
         }
     }
 }
-
 
 
 /*
