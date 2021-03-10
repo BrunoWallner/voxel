@@ -15,16 +15,11 @@ struct Rotation {
     angle: f32,
 }
 
-struct Position {
-    x: i32,
-    y: i32,
-}
-
 struct Layer {
     value: u32,
 }
 
-struct ShipEvent {
+struct ShipStatus {
     pub dead: bool,
 }
 
@@ -44,13 +39,11 @@ pub fn main() {
         .add_startup_system_to_stage("object_spawn", spawn_comets.system())
         .add_startup_system_to_stage("object_spawn", spawn_ship.system())
 
-        .add_event::<ShipEvent>()
-
         .add_system(parralax_scrolling.system())
         .add_system(camera_follow.system())
         .add_system(ship_movement.system())
         .add_system(collision_detection.system())
-        .add_system(allign_comets.system())
+        .add_system(event_handler.system())
 
         .add_plugins(DefaultPlugins)
     
@@ -96,6 +89,7 @@ fn spawn_ship(commands: &mut Commands, texture: Res<Textures>) {
             ..Default::default()
         })
         .with(Ship)
+        .with(ShipStatus { dead: false })
         .with(Rotation { angle: 0.0 });
 }
 
@@ -163,6 +157,8 @@ fn spawn_comets(
     for _z in 1 .. 2000 { //2000 = number of comets
         let x = rng.gen_range(-25000 .. 25000);
         let y = rng.gen_range(-25000 .. 25000);
+        let rotation = rng.gen_range(0.0 .. 360.0);
+        let scale = rng.gen_range(1.0 .. 2.5);
         commands
             .spawn(SpriteSheetBundle {
                 texture_atlas: texture.comet_texture.clone(),
@@ -170,31 +166,23 @@ fn spawn_comets(
                 ..Default::default()
             })
             .with(Comet)
-            .with(Position { x: x, y: y });
-    }
-}
-
-fn allign_comets(
-    mut comets: Query<(&mut Transform, &Position), With<Comet>>,
-) {
-    for (mut comet, position) in comets.iter_mut() {
-        comet.translation.x = position.x as f32;
-        comet.translation.y = position.y as f32;
+            .with(Transform { 
+                translation: Vec3 { x: x as f32, y: y as f32, z: 0.0 }, 
+                rotation: Quat::from_rotation_z(rotation),
+                scale: Vec3 { x: scale, y: scale, z: 0.0}
+            });
     }
 }
 
 fn collision_detection(
     comets: Query<&Transform, With<Comet>>,
-    ships: Query<&Transform, With<Ship>>,
-    mut events: ResMut<Events<ShipEvent>>,
+    mut ships: Query<(&Transform, &mut ShipStatus), With<Ship>>,
 ) {
     for comet in comets.iter() {
-        for ship in ships.iter() {
+        for (ship, mut status) in ships.iter_mut() {
             if comet.translation.x < ship.translation.x + 80.0 && comet.translation.y < ship.translation.y + 80.0
             && comet.translation.x > ship.translation.x - 80.0 && comet.translation.y > ship.translation.y - 80.0 {
-                events.send(ShipEvent {
-                    dead: true,
-                });
+                status.dead = true;
             }
         }
     }
@@ -228,63 +216,21 @@ fn camera_follow(
     mut camera_position: Query<&mut Transform, With<Camera>>
 ) {
     for ship in ship_position.iter() {
+        let ship_dir = ship.rotation * Vec3::unit_y();
         for mut camera in camera_position.iter_mut() {
-            camera.translation = ship.translation;
+            camera.translation = ship.translation + ship_dir * 200.0;
+            camera.rotation = ship.rotation;
         }
     }
 }
 
-
-/*
-
-use bevy::prelude::*;
-
-/// This example creates a new event, a system that triggers the event once per second,
-/// and a system that prints a message whenever the event is received.
-fn main() {
-    App::build()
-        .add_plugins(DefaultPlugins)
-        .add_event::<MyEvent>()
-        .init_resource::<EventTriggerState>()
-        .add_system(event_trigger_system.system())
-        .add_system(event_listener_system.system())
-        .run();
-}
-
-struct MyEvent {
-    pub message: String,
-}
-
-struct EventTriggerState {
-    event_timer: Timer,
-}
-
-impl Default for EventTriggerState {
-    fn default() -> Self {
-        EventTriggerState {
-            event_timer: Timer::from_seconds(1.0, true),
-        }
-    }
-}
-
-// sends MyEvent every second
-fn event_trigger_system(
-    time: Res<Time>,
-    mut state: ResMut<EventTriggerState>,
-    mut my_events: ResMut<Events<MyEvent>>,
+fn event_handler(
+    ship: Query<&ShipStatus, With<Ship>>,
 ) {
-    if state.event_timer.tick(time.delta_seconds()).finished() {
-        my_events.send(MyEvent {
-            message: "MyEvent just happened!".to_string(),
-        });
+    for status in ship.iter() {
+        if status.dead == true {
+            panic!("Dead!");
+        }
     }
 }
-
-// prints events as they come in
-fn event_listener_system(mut events: EventReader<MyEvent>) {
-    for my_event in events.iter() {
-        println!("{}", my_event.message);
-    }
-}
-*/
 
