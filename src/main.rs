@@ -96,11 +96,13 @@ fn spawn_ship(commands: &mut Commands, texture: Res<Textures>) {
 fn ship_movement(
     keyboard_input: Res<Input<KeyCode>>,
     mut ship_position: Query<(&mut Transform, &mut Rotation), With<Ship>>,
+    time: Res<Time>,
 ) {
+    let dt = time.delta_seconds_f64(); // <-- This needs to be f64 or else it will stutter
     for (mut transform, mut rotation) in ship_position.iter_mut() {
         let move_dir = transform.rotation * Vec3::unit_y();
-        let move_speed = 15.0;
-        let rotation_speed = 0.1;
+        let move_speed = (1000.0 * dt) as f32;
+        let rotation_speed = (2.0 * dt) as f32;
 
         if keyboard_input.pressed(KeyCode::Left) || keyboard_input.pressed(KeyCode::A) {
             rotation.angle += rotation_speed;
@@ -154,7 +156,7 @@ fn spawn_comets(
     texture: Res<Textures>,
 ) {
     let mut rng = rand::thread_rng();
-    for _z in 1 .. 2000 { //2000 = number of comets
+    for _z in 1 .. 200 { //2000 = number of comets
         let x = rng.gen_range(-25000 .. 25000);
         let y = rng.gen_range(-25000 .. 25000);
         let rotation = rng.gen_range(0.0 .. 360.0);
@@ -226,10 +228,11 @@ fn camera_follow(
 
 fn event_handler(
     ship: Query<&ShipStatus, With<Ship>>,
+    mut app_exit_events: ResMut<Events<bevy::app::AppExit>>,
 ) {
     for status in ship.iter() {
         if status.dead == true {
-            panic!("Dead!");
+            app_exit_events.send(bevy::app::AppExit);
         }
     }
 }
