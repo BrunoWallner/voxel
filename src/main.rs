@@ -156,7 +156,7 @@ fn spawn_comets(
     texture: Res<Textures>,
 ) {
     let mut rng = rand::thread_rng();
-    for _z in 1 .. 200 { //2000 = number of comets
+    for _z in 1 .. 200 { //200 = number of comets
         let x = rng.gen_range(-25000 .. 25000);
         let y = rng.gen_range(-25000 .. 25000);
         let rotation = rng.gen_range(0.0 .. 360.0);
