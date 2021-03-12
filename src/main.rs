@@ -66,11 +66,11 @@ fn spawn_chunk(
     
         for x in -32 .. 32 {
             for z in -32 .. 32 {
-                let mut y = (noise.get([
+                let y = (noise.get([
                     ( x as f32 / 20. ) as f64, 
                     ( z as f32 / 20. ) as f64,
                     seed.value,
-                ]) * 20.) as u32 + 16;
+                ]) * 15. + 16.0) as u32;
 
 
                 parent
