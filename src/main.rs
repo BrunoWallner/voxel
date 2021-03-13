@@ -1,8 +1,5 @@
 use bevy::prelude::*;
 
-use bevy_flycam::PlayerPlugin;
-use bevy_flycam::MovementSettings;
-
 use noise::NoiseFn;
 use noise::OpenSimplex;
 
@@ -20,14 +17,8 @@ struct Seed {value: f64}
 
 fn main() {
     App::build()
-        // Set WindowDescriptor Resource to change title and size
         .add_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
         .add_plugins(DefaultPlugins)
-        .add_plugin(PlayerPlugin)
-        .add_resource(MovementSettings {
-            sensitivity: 0.00005, // default: 0.00012
-            speed: 15.0, // default: 12.0
-        })
 
         .add_resource(Seed { value: thread_rng().gen() })
         .add_startup_system(setup.system())
@@ -43,6 +34,14 @@ fn setup(
     commands
         .spawn(LightBundle {
             transform: Transform::from_translation(Vec3::new(0.0, 100.0, 0.0)),
+            ..Default::default()
+        })
+        // Camera
+        .spawn(Camera3dBundle {
+            transform: Transform::from_matrix(Mat4::from_rotation_translation(
+                Quat::from_xyzw(-0.3, -0.5, -0.3, 0.5).normalize(),
+                Vec3::new(-31.0, 60.0, -5.0),
+            )),
             ..Default::default()
         });
 }
