@@ -13,8 +13,15 @@ struct Materials {
 
 struct Cube;
 struct Chunk {
-    x: i32,
-    z: i32,
+    pub x: i32,
+    pub z: i32,
+    pub index: [[[u8; 16]; 16]; 256]
+}
+impl Chunk {
+    //creates a new empty chunk filld with air
+    pub fn new(x: i32, z: i32) -> Self {
+        Chunk {x: x, z: z, index: [[[0u8; 16]; 16]; 256]}
+    }
 }
 
 struct Seed {value: f64}
@@ -72,6 +79,15 @@ fn spawn_chunk(
 ) {
     let noise = OpenSimplex::new();
     let chunk_size = 16;
+    
+    //debug
+    for x in 1 .. 16 {
+        for y in 1 .. 256 {
+            for z in 1 ..16 {
+                println!("{}", chunk.index[x][y][z]);
+            }
+        }
+    }
 
     for chunk_x in -4 .. 4 { 
     for chunk_z in -4 .. 4 {
@@ -83,7 +99,7 @@ fn spawn_chunk(
                 transform: Transform::from_translation(Vec3::new((chunk_x * chunk_size) as f32, 0.0, (chunk_z * chunk_size) as f32)),
                 ..Default::default()
             })
-            .with(Chunk { x: chunk_x, z: chunk_z })
+            .with(Chunk::new(chunk_x, chunk_z))
             .with_children(|parent| {
     
             for x in -chunk_size .. chunk_size {
