@@ -126,8 +126,6 @@ fn generate_chunk(
                     ( (z as i32 + chunk.z * chunk_size as i32) as f32 / 20. ) as f64,
                     seed.value * 10000.0,
                 ]) * 20. + 16.0) as usize;
-
-                //chunk.index[x][y][z] = 1;
                 
                 for i in 0 .. y - 4 {
                     chunk.index[x][i][z] = 2;
