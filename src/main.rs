@@ -38,6 +38,9 @@ fn main() {
         .add_startup_stage("ChunkSpawn", SystemStage::serial())
         .add_startup_system_to_stage("ChunkSpawn",spawn_chunk.system())
 
+        .add_startup_stage_after("ChunkSpawn", "ChunkGeneration", SystemStage::serial())
+        .add_startup_system_to_stage("ChunkGeneration",generate_chunk.system())
+
         .run();
 }
 
@@ -56,7 +59,7 @@ fn setup(
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
                 Quat::from_xyzw(-0.15, -0.5, -0.15, 0.5).normalize(),
-                Vec3::new(-125.0, 75.0, -10.0),
+                Vec3::new(-125.0, 75.0, -12.5),
             )),
             ..Default::default()
         });
@@ -74,67 +77,70 @@ fn setup(
 fn spawn_chunk(
     commands: &mut Commands,
     mut meshes: ResMut<Assets<Mesh>>,
-    seed: Res<Seed>,
     materials: Res<Materials>,
 ) {
-    let noise = OpenSimplex::new();
     let chunk_size = 16;
-    
-    //debug
-    for x in 1 .. 16 {
-        for y in 1 .. 256 {
-            for z in 1 ..16 {
-                println!("{}", chunk.index[x][y][z]);
-            }
-        }
-    }
 
     for chunk_x in -4 .. 4 { 
-    for chunk_z in -4 .. 4 {
+        for chunk_z in -4 .. 4 {
 
-        commands
-            .spawn(PbrBundle {
-                mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
-                material: materials.grass.clone(),
-                transform: Transform::from_translation(Vec3::new((chunk_x * chunk_size) as f32, 0.0, (chunk_z * chunk_size) as f32)),
-                ..Default::default()
-            })
-            .with(Chunk::new(chunk_x, chunk_z))
-            .with_children(|parent| {
-    
-            for x in -chunk_size .. chunk_size {
+            commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
+                    material: materials.grass.clone(),
+                    transform: Transform::from_translation(Vec3::new((chunk_x * chunk_size) as f32, 0.0, (chunk_z * chunk_size) as f32)),
+                    ..Default::default()
+                })
+                .with(Chunk::new(chunk_x, chunk_z));
+            }
+        }
+}
+
+fn generate_chunk(
+    commands: &mut Commands,
+    chunks: Query<&Chunk, With<Chunk>>,
+    materials: Res<Materials>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    seed: Res<Seed>,
+) {
+    let chunk_size = 16;
+    let noise = OpenSimplex::new();
+
+
+    for chunk in chunks.iter() {
+
+        for x in -chunk_size .. chunk_size {
             for z in -chunk_size .. chunk_size {
 
                 let rng = thread_rng().gen_range(1 .. 10000);
 
                 let y = (noise.get([
-                    ( (x + chunk_x * chunk_size) as f32 / 20. ) as f64, 
-                    ( (z + chunk_z * chunk_size) as f32 / 20. ) as f64,
+                    ( (x + chunk.x * chunk_size) as f32 / 20. ) as f64, 
+                    ( (z + chunk.z * chunk_size) as f32 / 20. ) as f64,
                     seed.value * 10000.0,
                 ]) * 15. + 16.0) as u32;
 
 
-                parent
+                commands
                     .spawn(PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
+                       mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
                         material: materials.grass.clone(),
-                        transform: Transform::from_translation(Vec3::new(x as f32, y as f32, z as f32)),
+                        transform: Transform::from_translation(Vec3::new((x + chunk.x * chunk_size) as f32, y as f32, (z + chunk.z * chunk_size) as f32)),
                         ..Default::default()
                     })
-                .with(Cube);
+                    .with(Cube);
 
                 if rng % 2000 == 0 {
-                    parent
+                    commands
                         .spawn(PbrBundle {
                             mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
                             material: materials.redstone.clone(),
-                            transform: Transform::from_translation(Vec3::new(x as f32, y as f32 + 1.0, z as f32)),
+                            transform: Transform::from_translation(Vec3::new((x + chunk.x * chunk_size) as f32, y as f32 + 1.0, (z + chunk.z * chunk_size) as f32)),
                             ..Default::default()
                         })
-                    .with(Cube);
+                        .with(Cube);
                 }
             }
-            }
-        });
-    }}
+        }
+    }
 }
