@@ -69,16 +69,16 @@ fn setup(
         });
 
         let grass_material_handle = asset_server.load("textures/grass.png");
-        let redstone_material_handle = asset_server.load("textures/redstone.png");
+        let stone_material_handle = asset_server.load("textures/stone.png");
 
         let air = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), ..Default::default() }); 
-        let grass = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(grass_material_handle.clone()), ..Default::default() }); 
-        let redstone = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(redstone_material_handle.clone()), ..Default::default() });
+        let grass = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(grass_material_handle.clone()), ..Default::default() });
+        let stone = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(stone_material_handle.clone()), ..Default::default() }); 
 
         let mut blocks: Vec<Handle<StandardMaterial>> = vec![];
         blocks.push(air);
         blocks.push(grass);
-        blocks.push(redstone);
+        blocks.push(stone);
 
         commands.insert_resource(Materials {
             blocks: blocks,
@@ -125,12 +125,19 @@ fn generate_chunk(
                     ( (x as i32 + chunk.x * chunk_size as i32) as f32 / 20. ) as f64, 
                     ( (z as i32 + chunk.z * chunk_size as i32) as f32 / 20. ) as f64,
                     seed.value * 10000.0,
-                ]) * 20. + 10.0) as usize;
+                ]) * 20. + 16.0) as usize;
 
-                chunk.index[x][y][z] = 1;
+                //chunk.index[x][y][z] = 1;
+                
+                for i in 0 .. y - 4 {
+                    chunk.index[x][i][z] = 2;
+                }
+                for i in y - 4 .. y  {
+                    chunk.index[x][i][z] = 1;
+                }
 
                 if rng & 2000 == 0 {
-                    chunk.index[x][y][z] = 2;
+                    chunk.index[x][y - 1][z] = 2;
                 }
 
             }
@@ -151,8 +158,22 @@ fn spawn_chunk(
                 for z in 0 .. 16 {
 
                     if chunk.index[x][y][z] != 0 {
+                        if x > 0 && x < 15 && y > 0 && y < 255 && z > 0 && z < 15  {
+                            if chunk.index[x - 1][y][z] == 0 || chunk.index[x + 1][y][z] == 0 || chunk.index[x][y - 1][z] == 0 
+                            || chunk.index[x][y + 1][z] == 0 || chunk.index[x][y][z - 1] == 0 || chunk.index[x][y][z + 1] == 0 {
+                                commands
+                                    .spawn(PbrBundle {
+                                        mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
+                                        material: materials.blocks[chunk.index[x][y][z] as usize].clone(),
+                                        transform: Transform::from_translation(Vec3::new((x as i32 + chunk.x * 16) as f32, y as f32, (z as i32 + chunk.z * 16) as f32)),
+                                        ..Default::default()
+                                    })
+                                    .with(Cube);
+                            }
+                        }
 
-                        commands
+                        else {
+                            commands
                             .spawn(PbrBundle {
                                 mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
                                 material: materials.blocks[chunk.index[x][y][z] as usize].clone(),
@@ -160,7 +181,7 @@ fn spawn_chunk(
                                 ..Default::default()
                             })
                             .with(Cube);
-
+                        }
                     }
                 }    
             }
