@@ -7,8 +7,7 @@ use rand::Rng;
 use rand::thread_rng;
 
 struct Materials {
-    grass: Handle<StandardMaterial>,
-    redstone: Handle<StandardMaterial>,
+    blocks: Vec<Handle<StandardMaterial>>,
 }
 
 struct Cube;
@@ -63,7 +62,7 @@ fn setup(
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
                 Quat::from_xyzw(-0.15, -0.5, -0.15, 0.5).normalize(),
-                Vec3::new(-125.0, 75.0, -8.0),
+                Vec3::new(-125.0, 75.0, 0.0),
             )),
             ..Default::default()
         });
@@ -71,9 +70,17 @@ fn setup(
         let grass_material_handle = asset_server.load("textures/grass.png");
         let redstone_material_handle = asset_server.load("textures/redstone.png");
 
+        let air = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), ..Default::default() }); 
+        let grass = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(grass_material_handle.clone()), ..Default::default() }); 
+        let redstone = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(redstone_material_handle.clone()), ..Default::default() });
+
+        let mut blocks: Vec<Handle<StandardMaterial>> = vec![];
+        blocks.push(air);
+        blocks.push(grass);
+        blocks.push(redstone);
+
         commands.insert_resource(Materials {
-            grass: materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(grass_material_handle.clone()), ..Default::default() }), 
-            redstone: materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(redstone_material_handle.clone()), ..Default::default() }), 
+            blocks: blocks,
         });
 
 }
@@ -85,13 +92,13 @@ fn create_chunk(
 ) {
     let chunk_size = 16;
 
-    for chunk_x in -4 .. 4 { 
-        for chunk_z in -4 .. 4 {
+    for chunk_x in -2 .. 2 { 
+        for chunk_z in -2 .. 2 {
 
             commands
                 .spawn(PbrBundle {
                     mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
-                    material: materials.grass.clone(),
+                    material: materials.blocks[1].clone(),
                     transform: Transform::from_translation(Vec3::new((chunk_x * chunk_size) as f32, 0.0, (chunk_z * chunk_size) as f32)),
                     ..Default::default()
                 })
@@ -117,13 +124,16 @@ fn generate_chunk(
                     ( (x as i32 + chunk.x * chunk_size as i32) as f32 / 20. ) as f64, 
                     ( (z as i32 + chunk.z * chunk_size as i32) as f32 / 20. ) as f64,
                     seed.value * 10000.0,
-                ]) * 20. + 5.0) as usize;
+                ]) * 20. + 10.0) as usize;
 
                 chunk.index[x][y][z] = 1;
 
+                if rng & 2000 == 0 {
+                    chunk.index[x][y][z] = 2;
+                }
+
             }
         }
-        
     }
 }
 
@@ -139,15 +149,17 @@ fn spawn_chunk(
             for y in 0 .. 255 {
                 for z in 0 .. 16 {
 
-                    if chunk.index[x][y][z] == 1 {
+                    if chunk.index[x][y][z] != 0 {
+
                         commands
                             .spawn(PbrBundle {
                                 mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
-                                material: materials.grass.clone(),
+                                material: materials.blocks[chunk.index[x][y][z] as usize].clone(),
                                 transform: Transform::from_translation(Vec3::new((x as i32 + chunk.x * 16) as f32, y as f32, (z as i32 + chunk.z * 16) as f32)),
                                 ..Default::default()
                             })
                             .with(Cube);
+
                     }
                 }    
             }
