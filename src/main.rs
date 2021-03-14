@@ -25,6 +25,7 @@ impl Chunk {
 
 struct Seed {value: f64}
 
+#[bevy_main]
 fn main() {
     App::build()
         .add_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
