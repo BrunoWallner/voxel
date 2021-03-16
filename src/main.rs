@@ -11,6 +11,8 @@ struct Materials {
 }
 
 struct Cube;
+struct Camera;
+
 struct Chunk {
     pub x: i32,
     pub z: i32,
@@ -44,6 +46,7 @@ fn main() {
         .add_startup_stage_after("ChunkGeneration", "ChunkSpawning", SystemStage::serial())
         .add_startup_system_to_stage("ChunkSpawning",spawn_chunk.system())
 
+        .add_system(camera_controll.system())
 
         .run();
 }
@@ -62,11 +65,12 @@ fn setup(
         // Camera
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(-0.15, -0.5, -0.15, 0.5).normalize(),
-                Vec3::new(-125.0, 75.0, 0.0),
+                Quat::from_xyzw(-0.2, -0.5, -0.2, 0.5).normalize(),
+                Vec3::new(-10.0, 35.0, 0.0),
             )),
             ..Default::default()
-        });
+        })
+        .with(Camera);
 
         let grass_material_handle = asset_server.load("textures/grass.png");
         let stone_material_handle = asset_server.load("textures/stone.png");
@@ -83,7 +87,34 @@ fn setup(
         commands.insert_resource(Materials {
             blocks: blocks,
         });
+}
 
+fn camera_controll(
+    keyboard_input: Res<Input<KeyCode>>,
+    mut camera: Query<&mut Transform, With<Camera>>,
+    time: Res<Time>,
+) {
+    let speed = 10.0;
+    for mut camera in camera.iter_mut() {
+        if keyboard_input.pressed(KeyCode::W) {
+            camera.translation.x += speed * time.delta_seconds()
+        }
+        if keyboard_input.pressed(KeyCode::A) {
+            camera.translation.z -= speed * time.delta_seconds()
+        }
+        if keyboard_input.pressed(KeyCode::S) {
+            camera.translation.x -= speed * time.delta_seconds()
+        }
+        if keyboard_input.pressed(KeyCode::D) {
+            camera.translation.z += speed * time.delta_seconds()
+        }
+        if keyboard_input.pressed(KeyCode::Space) {
+            camera.translation.y += speed * time.delta_seconds()
+        }
+        if keyboard_input.pressed(KeyCode::LShift) {
+            camera.translation.y -= speed * time.delta_seconds()
+        }
+    }
 }
 
 fn create_chunk(
@@ -126,18 +157,21 @@ fn generate_chunk(
                     ( (z as i32 + chunk.z * chunk_size as i32) as f32 / 20. ) as f64,
                     seed.value * 10000.0,
                 ]) * 20. + 16.0) as usize;
-                
+
+                /*
                 for i in 0 .. y - 4 {
                     chunk.index[x][i][z] = 2;
                 }
                 for i in y - 4 .. y  {
                     chunk.index[x][i][z] = 1;
                 }
+                */
+                chunk.index[x][y][z] = 1;
 
-                if rng & 2000 == 0 {
-                    chunk.index[x][y - 1][z] = 2;
+                //generates random stones on surface
+                if rng & 5000 == 0 {
+                    chunk.index[x][y][z] = 2;
                 }
-
             }
         }
     }
@@ -156,22 +190,8 @@ fn spawn_chunk(
                 for z in 0 .. 16 {
 
                     if chunk.index[x][y][z] != 0 {
-                        if x > 0 && x < 15 && y > 0 && y < 255 && z > 0 && z < 15  {
-                            if chunk.index[x - 1][y][z] == 0 || chunk.index[x + 1][y][z] == 0 || chunk.index[x][y - 1][z] == 0 
-                            || chunk.index[x][y + 1][z] == 0 || chunk.index[x][y][z - 1] == 0 || chunk.index[x][y][z + 1] == 0 {
-                                commands
-                                    .spawn(PbrBundle {
-                                        mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
-                                        material: materials.blocks[chunk.index[x][y][z] as usize].clone(),
-                                        transform: Transform::from_translation(Vec3::new((x as i32 + chunk.x * 16) as f32, y as f32, (z as i32 + chunk.z * 16) as f32)),
-                                        ..Default::default()
-                                    })
-                                    .with(Cube);
-                            }
-                        }
 
-                        else {
-                            commands
+                        commands
                             .spawn(PbrBundle {
                                 mesh: meshes.add(Mesh::from(shape::Cube{ size: 1.0 })),
                                 material: materials.blocks[chunk.index[x][y][z] as usize].clone(),
@@ -179,7 +199,6 @@ fn spawn_chunk(
                                 ..Default::default()
                             })
                             .with(Cube);
-                        }
                     }
                 }    
             }
