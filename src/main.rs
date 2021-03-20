@@ -125,8 +125,8 @@ fn create_chunk(
 ) {
     let chunk_size = 16;
 
-    for chunk_x in -5 .. 5 { 
-        for chunk_z in -5 .. 5 {
+    for chunk_x in -1 .. 1 { 
+        for chunk_z in -1 .. 1 {
 
             commands
                 .spawn(PbrBundle {
@@ -182,11 +182,13 @@ use bevy::render::mesh::Indices;
 
 fn spawn_chunk(
     commands: &mut Commands,
-    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     mut meshes: ResMut<Assets<Mesh>>,
-    asset_server: Res<AssetServer>,
     chunks: Query<&Chunk, With<Chunk>>,
+    time: Res<Time>,
 ) {
+    let start_time = time.time_since_startup();
+    let mut chunk_counter: u32 = 0;
     for chunk in chunks.iter() {
         let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
 
@@ -197,31 +199,24 @@ fn spawn_chunk(
         let mut indices: Vec<u32> = Vec::new();
 
         //creates all the needed positions vor vertices
-        for x in 0..16 {
-            for y in 0..256 {
-                for z in 0..16 {
-                    positions.push([x as f32, y as f32, z as f32 * 16.0 /* I really dont know why but it has to be this exact numbet(16) :/ */]);
-
-                    //I hope this isnt needed
-                    normals.push([0., 0., 1.]);
+        for x in 0..17 {
+            for y in 0..257 {
+                for z in 0..17 {
+                    positions.push([x as f32, y as f32, z as f32]);
+                    normals.push([0., 0., 0.]);
                     uvs.push([0., 0.]);
                 }
             }
         }
         
-        //fills entire chunk with planes
-        // BIG PERFORMANCE IMPROVEMENTS CAN BE DONE THERE BY MATHEMATICALLY CALCULATE WHAT INDEX IT NEEDS!
         for x in 0..16 {
-            for y in 0..256 {
+            for mut y in 0..256 {
                 for z in 0..16 {
                     if chunk.index[x][y][z] != 0 {
-                        indices.push(get_vertex_position(&positions, [0 * x as u32, y as u32, 0 * z as u32]));
-                        indices.push(get_vertex_position(&positions, [1 * x as u32, y as u32, 0 * z as u32]));
-                        indices.push(get_vertex_position(&positions, [1 * x as u32, y as u32, 1 * z as u32]));
-
-                        indices.push(get_vertex_position(&positions, [0 * x as u32, y as u32, 0 * z as u32]));
-                        indices.push(get_vertex_position(&positions, [0 * x as u32, y as u32, 1 * z as u32]));
-                        indices.push(get_vertex_position(&positions, [1 * x as u32, y as u32, 1 * z as u32]));
+                        indices.push(get_indice_position([x+1, y, z  ]));
+                        indices.push(get_indice_position([x  , y, z  ]));
+                        indices.push(get_indice_position([x+1, y, z+1]));
+                        
                     }
                 }
             }
@@ -236,31 +231,28 @@ fn spawn_chunk(
 
 
         commands
-            .spawn(SpriteBundle {
+            .spawn(PbrBundle {
                 mesh: meshes.add(mesh),
-                material: materials.add(asset_server.load("textures/grass.png").clone().into()),
+                material: materials.add(Color::rgb(0.5, 0.5, 0.5).into()),
                 transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
-                    Vec3::splat(0.0667),
+                    Vec3::splat(1.0),
                     Quat::from_rotation_x(0.0),
                     Vec3::new((chunk.x * 16) as f32, 0.0, (chunk.z * 16) as f32),
                 )),
                 ..Default::default()
             });
+        chunk_counter+=1;
     }
+    let end_time = time.time_since_startup() - start_time;
+    
+    println!("Generated {} chunks in {:?} seconds", chunk_counter, end_time);
 }
 
-
-fn get_vertex_position(
-    positions: &Vec<[f32; 3]>,
-    xyz: [u32; 3],
+fn get_indice_position(
+    position: [usize; 3],
 ) -> u32 {
-    let mut result: u32 = 0;
-    for i in 0..positions.len() {
-        if xyz[0] == positions[i][0] as u32
-        && xyz[1] == positions[i][1] as u32
-        && xyz[2] == (positions[i][2] / 16.0) as u32 {
-            result = i as u32;
-        }
-    }
-    result
+    let x = 17; //chunk sizes
+    let y = 257;
+
+    (position[0]*x*y + position[1]*x + position[2]) as u32
 }
