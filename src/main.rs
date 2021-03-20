@@ -125,8 +125,8 @@ fn create_chunk(
 ) {
     let chunk_size = 16;
 
-    for chunk_x in -1 .. 1 { 
-        for chunk_z in -1 .. 1 {
+    for chunk_x in -10 .. 10 { 
+        for chunk_z in -10 .. 10 {
 
             commands
                 .spawn(PbrBundle {
@@ -210,13 +210,17 @@ fn spawn_chunk(
         }
         
         for x in 0..16 {
-            for mut y in 0..256 {
+            for y in 0..256 {
                 for z in 0..16 {
                     if chunk.index[x][y][z] != 0 {
+                        //draws simple 1x1 plane
                         indices.push(get_indice_position([x+1, y, z  ]));
                         indices.push(get_indice_position([x  , y, z  ]));
                         indices.push(get_indice_position([x+1, y, z+1]));
-                        
+
+                        indices.push(get_indice_position([x  , y, z  ]));
+                        indices.push(get_indice_position([x  , y, z+1]));
+                        indices.push(get_indice_position([x+1, y, z+1]));
                     }
                 }
             }
@@ -233,7 +237,7 @@ fn spawn_chunk(
         commands
             .spawn(PbrBundle {
                 mesh: meshes.add(mesh),
-                material: materials.add(Color::rgb(0.5, 0.5, 0.5).into()),
+                material: materials.add(Color::rgb(0.2, 1.0, 0.5).into()),
                 transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
                     Vec3::splat(1.0),
                     Quat::from_rotation_x(0.0),
