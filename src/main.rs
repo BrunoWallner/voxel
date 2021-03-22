@@ -143,7 +143,11 @@ fn create_chunk(
 fn generate_chunk(
     mut chunks: Query<&mut Chunk, With<Chunk>>,
     seed: Res<Seed>,
+    time: Res<Time>,
 ) {
+    let start_time = time.time_since_startup();
+    let mut chunk_counter: u32 = 0;
+
     let chunk_size: usize = 16;
     let noise = OpenSimplex::new();
     noise.set_seed(seed.value);
@@ -175,7 +179,10 @@ fn generate_chunk(
                 }
             }
         }
+        chunk_counter+=1;
     }
+    let end_time = time.time_since_startup() - start_time;
+    println!("Generated {} in {:?}", chunk_counter, end_time);
 }
 
 use bevy::render::mesh::Indices;
@@ -197,30 +204,37 @@ fn spawn_chunk(
         let mut uvs: Vec<[f32; 2]> = Vec::new();
 
         let mut indices: Vec<u32> = Vec::new();
-
-        //creates all the needed positions vor vertices
-        for x in 0..17 {
-            for y in 0..257 {
-                for z in 0..17 {
-                    positions.push([x as f32, y as f32, z as f32]);
-                    normals.push([0., 0., 0.]);
-                    uvs.push([0., 0.]);
-                }
-            }
-        }
         
         for x in 0..16 {
             for y in 0..256 {
                 for z in 0..16 {
                     if chunk.index[x][y][z] != 0 {
-                        //draws simple 1x1 plane
-                        indices.push(get_indice_position([x+1, y, z  ]));
-                        indices.push(get_indice_position([x  , y, z  ]));
-                        indices.push(get_indice_position([x+1, y, z+1]));
+                        for i in 0..2 {
+                            positions.push([x as f32, (y + i) as f32, z as f32]);
+                            normals.push([0., 0., 0.]);
+                            uvs.push([0., 0.]);
 
-                        indices.push(get_indice_position([x  , y, z  ]));
-                        indices.push(get_indice_position([x  , y, z+1]));
-                        indices.push(get_indice_position([x+1, y, z+1]));
+                            positions.push([(x + 1) as f32, (y + i) as f32, z as f32]);
+                            normals.push([0., 0., 0.]);
+                            uvs.push([0., 0.]);
+
+                            positions.push([(x + 1) as f32, (y + i) as f32, (z + 1) as f32]);
+                            normals.push([0., 0., 0.]);
+                            uvs.push([0., 0.]);
+
+                            positions.push([x as f32, (y + i) as f32, (z + 1) as f32]);
+                            normals.push([0., 0., 0.]);
+                            uvs.push([0., 0.]);
+                        }
+
+                        //creates indices
+                        indices.push((positions.len() - 8 + 1) as u32);
+                        indices.push((positions.len() - 8 + 0) as u32);
+                        indices.push((positions.len() - 8 + 2) as u32);
+
+                        indices.push((positions.len() - 8 + 0) as u32);
+                        indices.push((positions.len() - 8 + 3) as u32);
+                        indices.push((positions.len() - 8 + 2) as u32);
                     }
                 }
             }
@@ -249,14 +263,5 @@ fn spawn_chunk(
     }
     let end_time = time.time_since_startup() - start_time;
     
-    println!("Generated {} chunks in {:?} seconds", chunk_counter, end_time);
-}
-
-fn get_indice_position(
-    position: [usize; 3],
-) -> u32 {
-    let x = 17; //chunk sizes
-    let y = 257;
-
-    (position[0]*x*y + position[1]*x + position[2]) as u32
+    println!("Spawned {} chunks in {:?} seconds", chunk_counter, end_time);
 }
