@@ -15,7 +15,7 @@ pub struct Chunk {
 impl Chunk {
     //creates a new empty chunk filled with air
     pub fn new(x: i32, z: i32) -> Self {
-        Chunk {x: x, z: z, index: generate_chunk_index(100, x, z), loaded: false, should_load: false}
+        Chunk {x: x, z: z, index: generate_chunk_index(100, x, z), loaded: false, should_load: true}
     }
 }
 
@@ -39,6 +39,10 @@ pub fn generate_chunk_index(
             ]) * 20. + 16.0) as usize;
 
             index[x][y][z] = 1;
+
+            for i in 0..y-1 {
+                index[x][i][z] = 2;
+            }
         }
     }
     index
@@ -47,22 +51,6 @@ pub fn generate_chunk_index(
 use crate::Materials;
 use crate::Camera;
 
-pub fn create_chunk(
-    commands: &mut Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    materials: Res<Materials>,
-) {
-    commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
-            material: materials.blocks[1].clone(),
-            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
-            ..Default::default()
-        })
-        .with(Chunk::new(0, 0));
-}
-
-
 pub fn chunk_loader(
     camera: Query<&Transform, With<Camera>>,
     mut chunk: Query<&mut Chunk, With<Chunk>>,
@@ -70,59 +58,43 @@ pub fn chunk_loader(
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<Materials>,
 ) {
-    let render_distance: i32 = 3;
+    let render_distance: i32 = 10;
 
     //creates empty chunk if needed
-    let mut camera_chunk: [i32; 2] = [0, 0];
-    let mut is_empty_chunk: bool = false;
+    for x in -render_distance..render_distance {
+        for z in -render_distance..render_distance {
+            let mut camera_chunk: [i32; 2] = [0, 0];
+            let mut is_empty_chunk: bool = false;
 
-    for camera in camera.iter() {
-        camera_chunk = [(camera.translation.x / 16.0) as i32, (camera.translation.z / 16.0) as i32]
-    }
-    for chunk in chunk.iter_mut() {
-        if chunk.x == camera_chunk[0]
-        && chunk.z == camera_chunk[1] {
-            is_empty_chunk = true;
-        }
-    }
-
-    if !is_empty_chunk {
-        commands
-        .spawn(PbrBundle {
-            mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
-            material: materials.blocks[1].clone(),
-            transform: Transform::from_translation(Vec3::new((camera_chunk[0]*16) as f32, 0.0, (camera_chunk[1]*16) as f32)),
-            ..Default::default()
-        })
-        .with(Chunk::new(camera_chunk[0], camera_chunk[1]));
-
-        println!("Generated chunk at {}, {}!", camera_chunk[0], camera_chunk[1]);
-    }
-
-    //marks chunks with shoud_load if they should load when the camera is near them
-    for camera in camera.iter() {
-        for mut chunk in chunk.iter_mut() {
-
-            if !chunk.loaded
-            && camera.translation.x > (chunk.x*16 - 16*render_distance) as f32
-            && camera.translation.x < (chunk.x*16 + 16*render_distance) as f32
-            && camera.translation.z > (chunk.z*16 - 16*render_distance) as f32
-            && camera.translation.z < (chunk.z*16 + 16*render_distance) as f32
-            {
-                chunk.should_load = true;
+            for camera in camera.iter() {
+                camera_chunk = [(camera.translation.x / 16.0 + x as f32) as i32, (camera.translation.z / 16.0 + z as f32) as i32]
             }
-            else {
-                chunk.should_load = false;
+            for chunk in chunk.iter_mut() {
+                if chunk.x == camera_chunk[0]
+                && chunk.z == camera_chunk[1] {
+                    is_empty_chunk = true;
+                }
+            }
+
+            if !is_empty_chunk {
+                commands
+                .spawn(PbrBundle {
+                    mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
+                    material: materials.blocks[1].clone(),
+                    transform: Transform::from_translation(Vec3::new((camera_chunk[0]*16 + 8) as f32, 0.0, (camera_chunk[1]*16 + 8) as f32)),
+                    ..Default::default()
+                })
+                .with(Chunk::new(camera_chunk[0], camera_chunk[1]));
             }
         }
-    } 
+    }   
 }
 
 use bevy::render::mesh::Indices;
 
 pub fn spawn_chunk(
     commands: &mut Commands,
-    mut materials: ResMut<Assets<StandardMaterial>>,
+    materials: Res<Materials>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut chunks: Query<&mut Chunk, With<Chunk>>,
 ) {
@@ -143,31 +115,154 @@ pub fn spawn_chunk(
                     for z in 0..16 {
                         if chunk.index[x][y][z] != 0 {
                             for i in 0..2 {
+                                let uv_height = 0.0;
                                 positions.push([x as f32, (y + i) as f32, z as f32]);
                                 normals.push([0., 0., 0.]);
-                                uvs.push([0., 0.]);
+                                uvs.push([uv_height, uv_height]);
 
                                 positions.push([(x + 1) as f32, (y + i) as f32, z as f32]);
                                 normals.push([0., 0., 0.]);
-                                uvs.push([0., 0.]);
+                                uvs.push([uv_height, uv_height]);
 
                                 positions.push([(x + 1) as f32, (y + i) as f32, (z + 1) as f32]);
                                 normals.push([0., 0., 0.]);
-                                uvs.push([0., 0.]);
+                                uvs.push([uv_height, uv_height]);
 
                                 positions.push([x as f32, (y + i) as f32, (z + 1) as f32]);
                                 normals.push([0., 0., 0.]);
-                                uvs.push([0., 0.]);
+                                uvs.push([uv_height, uv_height]);
                             }
 
                             //creates indices
-                            indices.push((positions.len() - 8 + 1) as u32);
-                            indices.push((positions.len() - 8 + 0) as u32);
-                            indices.push((positions.len() - 8 + 2) as u32);
+                        
+                            //below plane
+                            if y >= 1 {
+                                if chunk.index[x][y-1][z] == 0 {
+                                    indices.push((positions.len() - 8 + 0) as u32);
+                                    indices.push((positions.len() - 8 + 1) as u32);
+                                    indices.push((positions.len() - 8 + 3) as u32);
 
-                            indices.push((positions.len() - 8 + 0) as u32);
-                            indices.push((positions.len() - 8 + 3) as u32);
-                            indices.push((positions.len() - 8 + 2) as u32);
+                                    indices.push((positions.len() - 8 + 2) as u32);
+                                    indices.push((positions.len() - 8 + 3) as u32);
+                                    indices.push((positions.len() - 8 + 1) as u32);
+                                }
+                            } else {
+                                indices.push((positions.len() - 8 + 0) as u32);
+                                indices.push((positions.len() - 8 + 1) as u32);
+                                indices.push((positions.len() - 8 + 3) as u32);
+
+                                indices.push((positions.len() - 8 + 2) as u32);
+                                indices.push((positions.len() - 8 + 3) as u32);
+                                indices.push((positions.len() - 8 + 1) as u32);
+                            }
+
+                            //upper plane
+                            if y <= 254 {
+                                if chunk.index[x][y+1][z] == 0 {
+                                    indices.push((positions.len() - 8 + 5) as u32);
+                                    indices.push((positions.len() - 8 + 4) as u32);
+                                    indices.push((positions.len() - 8 + 6) as u32);
+
+                                    indices.push((positions.len() - 8 + 4) as u32);
+                                    indices.push((positions.len() - 8 + 7) as u32);
+                                    indices.push((positions.len() - 8 + 6) as u32);
+                                }
+                            } else {
+                                indices.push((positions.len() - 8 + 5) as u32);
+                                indices.push((positions.len() - 8 + 4) as u32);
+                                indices.push((positions.len() - 8 + 6) as u32);
+
+                                indices.push((positions.len() - 8 + 4) as u32);
+                                indices.push((positions.len() - 8 + 7) as u32);
+                                indices.push((positions.len() - 8 + 6) as u32);
+                            }
+                            
+
+                            //left plane
+                            if z >= 1 {
+                                if chunk.index[x][y][z-1] == 0 {
+                                    indices.push((positions.len() - 8 + 1) as u32);
+                                    indices.push((positions.len() - 8 + 0) as u32);
+                                    indices.push((positions.len() - 8 + 5) as u32);
+
+                                    indices.push((positions.len() - 8 + 0) as u32);
+                                    indices.push((positions.len() - 8 + 4) as u32);
+                                    indices.push((positions.len() - 8 + 5) as u32);
+                                }
+                            } else {
+                                indices.push((positions.len() - 8 + 1) as u32);
+                                indices.push((positions.len() - 8 + 0) as u32);
+                                indices.push((positions.len() - 8 + 5) as u32);
+
+                                indices.push((positions.len() - 8 + 0) as u32);
+                                indices.push((positions.len() - 8 + 4) as u32);
+                                indices.push((positions.len() - 8 + 5) as u32);
+                            }
+
+                            //right plane
+                            if z <= 14 {
+                                if chunk.index[x][y][z+1] == 0 {
+                                    indices.push((positions.len() - 8 + 3) as u32);
+                                    indices.push((positions.len() - 8 + 2) as u32);
+                                    indices.push((positions.len() - 8 + 6) as u32);
+
+                                    indices.push((positions.len() - 8 + 7) as u32);
+                                    indices.push((positions.len() - 8 + 3) as u32);
+                                    indices.push((positions.len() - 8 + 6) as u32);
+                                }
+                            } else {
+                                indices.push((positions.len() - 8 + 3) as u32);
+                                indices.push((positions.len() - 8 + 2) as u32);
+                                indices.push((positions.len() - 8 + 6) as u32);
+
+                                indices.push((positions.len() - 8 + 7) as u32);
+                                indices.push((positions.len() - 8 + 3) as u32);
+                                indices.push((positions.len() - 8 + 6) as u32);
+                            }
+                            
+
+                            //front plane
+                            if x >= 1 {
+                               if chunk.index[x-1][y][z] == 0 {
+                                    indices.push((positions.len() - 8 + 0) as u32);
+                                    indices.push((positions.len() - 8 + 3) as u32);
+                                    indices.push((positions.len() - 8 + 4) as u32);
+
+                                    indices.push((positions.len() - 8 + 4) as u32);
+                                    indices.push((positions.len() - 8 + 3) as u32);
+                                    indices.push((positions.len() - 8 + 7) as u32);
+                                } 
+                            } else {
+                                indices.push((positions.len() - 8 + 0) as u32);
+                                indices.push((positions.len() - 8 + 3) as u32);
+                                indices.push((positions.len() - 8 + 4) as u32);
+
+                                indices.push((positions.len() - 8 + 4) as u32);
+                                indices.push((positions.len() - 8 + 3) as u32);
+                                indices.push((positions.len() - 8 + 7) as u32);
+                            }
+                            
+
+                            //back plane
+                            if x <= 14 {
+                                if chunk.index[x+1][y][z] == 0 {
+                                    indices.push((positions.len() - 8 + 2) as u32);
+                                    indices.push((positions.len() - 8 + 1) as u32);
+                                    indices.push((positions.len() - 8 + 5) as u32);
+
+                                    indices.push((positions.len() - 8 + 2) as u32);
+                                    indices.push((positions.len() - 8 + 5) as u32);
+                                    indices.push((positions.len() - 8 + 6) as u32);
+                                }
+                            } else {
+                                indices.push((positions.len() - 8 + 2) as u32);
+                                indices.push((positions.len() - 8 + 1) as u32);
+                                indices.push((positions.len() - 8 + 5) as u32);
+
+                                indices.push((positions.len() - 8 + 2) as u32);
+                                indices.push((positions.len() - 8 + 5) as u32);
+                                indices.push((positions.len() - 8 + 6) as u32);
+                            }
                         }
                     }
                 }
@@ -184,7 +279,7 @@ pub fn spawn_chunk(
             commands
                 .spawn(PbrBundle {
                     mesh: meshes.add(mesh),
-                    material: materials.add(Color::rgb(0.2, 1.0, 0.5).into()),
+                    material: materials.blocks[1].clone(),
                     transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
                         Vec3::splat(1.0),
                         Quat::from_rotation_x(0.0),

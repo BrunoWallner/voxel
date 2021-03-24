@@ -1,5 +1,9 @@
 use bevy::prelude::*;
 
+use bevy_flycam::NoCameraPlayerPlugin;
+use bevy_flycam::FlyCam;
+use bevy_flycam::MovementSettings;
+
 pub struct Materials {
     pub blocks: Vec<Handle<StandardMaterial>>,
 }
@@ -14,12 +18,15 @@ fn main() {
         .add_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
         .add_plugins(DefaultPlugins)
 
+        .add_plugin(NoCameraPlayerPlugin)
+        .add_resource(MovementSettings {
+            sensitivity: 0.000050, // default: 0.00012
+            speed: 15.0, // default: 12.0
+        })
+
         .add_startup_system(setup.system())
 
-        .add_startup_stage("ChunkCreation", SystemStage::serial())
-        .add_startup_system_to_stage("ChunkCreation",chunk::create_chunk.system())
-
-        .add_system(camera_controll.system())
+        //.add_system(camera_controll.system())
         .add_system(chunk::chunk_loader.system())
         .add_system(chunk::spawn_chunk.system())
 
@@ -40,12 +47,13 @@ fn setup(
         // Camera
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(-0.5, -0.5, -0.5, 0.5).normalize(),
+                Quat::from_xyzw(-0.1, -0.5, -0.1, 0.5).normalize(),
                 Vec3::new(-10.0, 35.0, 0.0),
             )),
             ..Default::default()
         })
-        .with(Camera);
+        .with(Camera)
+        .with(FlyCam);
 
         let grass_material_handle = asset_server.load("textures/grass.png");
         let stone_material_handle = asset_server.load("textures/stone.png");
@@ -62,32 +70,4 @@ fn setup(
         commands.insert_resource(Materials {
             blocks: blocks,
         });
-}
-
-fn camera_controll(
-    keyboard_input: Res<Input<KeyCode>>,
-    mut camera: Query<&mut Transform, With<Camera>>,
-    time: Res<Time>,
-) {
-    let speed = 25.0;
-    for mut camera in camera.iter_mut() {
-        if keyboard_input.pressed(KeyCode::W) {
-            camera.translation.x += speed * time.delta_seconds()
-        }
-        if keyboard_input.pressed(KeyCode::A) {
-            camera.translation.z -= speed * time.delta_seconds()
-        }
-        if keyboard_input.pressed(KeyCode::S) {
-            camera.translation.x -= speed * time.delta_seconds()
-        }
-        if keyboard_input.pressed(KeyCode::D) {
-            camera.translation.z += speed * time.delta_seconds()
-        }
-        if keyboard_input.pressed(KeyCode::Space) {
-            camera.translation.y += speed * time.delta_seconds()
-        }
-        if keyboard_input.pressed(KeyCode::LShift) {
-            camera.translation.y -= speed * time.delta_seconds()
-        }
-    }
 }
