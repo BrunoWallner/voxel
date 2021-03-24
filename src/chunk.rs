@@ -5,44 +5,104 @@ use noise::NoiseFn;
 use noise::OpenSimplex;
 use noise::Seedable;
 
-use rand::Rng;
-use rand::thread_rng;
+pub struct Chunk {
+    pub x: i32,
+    pub z: i32,
+    pub index: [[[u8; 16]; 256]; 16],
+    pub loaded: bool,
+    pub should_load: bool,
+}
+impl Chunk {
+    //creates a new empty chunk filled with air
+    pub fn new(x: i32, z: i32) -> Self {
+        Chunk {x: x, z: z, index: generate_chunk_index(100, x, z), loaded: false, should_load: false}
+    }
+}
+
+pub fn generate_chunk_index(
+    seed: u32,
+    chunk_x: i32,
+    chunk_z: i32,
+) -> [[[u8; 16]; 256]; 16] {
+
+    let chunk_size: usize = 16;
+    let noise = OpenSimplex::new();
+    noise.set_seed(seed);
+
+    let mut index: [[[u8; 16]; 256]; 16] = [[[0u8; 16]; 256]; 16];
+
+    for x in 0 .. chunk_size {
+        for z in 0 .. chunk_size {
+            let y = (noise.get([
+                ( (x as i32 + chunk_x * 16 as i32) as f32 / 20. ) as f64, 
+                ( (z as i32 + chunk_z * 16 as i32) as f32 / 20. ) as f64,
+            ]) * 20. + 16.0) as usize;
+
+            index[x][y][z] = 1;
+        }
+    }
+    index
+}
 
 use crate::Materials;
-use crate::Chunk;
 use crate::Camera;
-use crate::Seed;
-
 
 pub fn create_chunk(
     commands: &mut Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     materials: Res<Materials>,
 ) {
-    let chunk_size = 16;
-
-    for chunk_x in -10 .. 10 { 
-        for chunk_z in -10 .. 10 {
-
-            commands
-                .spawn(PbrBundle {
-                    mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
-                    material: materials.blocks[1].clone(),
-                    transform: Transform::from_translation(Vec3::new((chunk_x * chunk_size) as f32, 0.0, (chunk_z * chunk_size) as f32)),
-                    ..Default::default()
-                })
-                .with(Chunk::new(chunk_x, chunk_z));
-            }
-        }
+    commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
+            material: materials.blocks[1].clone(),
+            transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
+            ..Default::default()
+        })
+        .with(Chunk::new(0, 0));
 }
+
 
 pub fn chunk_loader(
     camera: Query<&Transform, With<Camera>>,
     mut chunk: Query<&mut Chunk, With<Chunk>>,
+    commands: &mut Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    materials: Res<Materials>,
 ) {
     let render_distance: i32 = 3;
+
+    //creates empty chunk if needed
+    let mut camera_chunk: [i32; 2] = [0, 0];
+    let mut is_empty_chunk: bool = false;
+
+    for camera in camera.iter() {
+        camera_chunk = [(camera.translation.x / 16.0) as i32, (camera.translation.z / 16.0) as i32]
+    }
+    for chunk in chunk.iter_mut() {
+        if chunk.x == camera_chunk[0]
+        && chunk.z == camera_chunk[1] {
+            is_empty_chunk = true;
+        }
+    }
+
+    if !is_empty_chunk {
+        commands
+        .spawn(PbrBundle {
+            mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
+            material: materials.blocks[1].clone(),
+            transform: Transform::from_translation(Vec3::new((camera_chunk[0]*16) as f32, 0.0, (camera_chunk[1]*16) as f32)),
+            ..Default::default()
+        })
+        .with(Chunk::new(camera_chunk[0], camera_chunk[1]));
+
+        println!("Generated chunk at {}, {}!", camera_chunk[0], camera_chunk[1]);
+    }
+
+    //marks chunks with shoud_load if they should load when the camera is near them
     for camera in camera.iter() {
         for mut chunk in chunk.iter_mut() {
+
             if !chunk.loaded
             && camera.translation.x > (chunk.x*16 - 16*render_distance) as f32
             && camera.translation.x < (chunk.x*16 + 16*render_distance) as f32
@@ -56,51 +116,6 @@ pub fn chunk_loader(
             }
         }
     } 
-}
-
-pub fn generate_chunk(
-    mut chunks: Query<&mut Chunk, With<Chunk>>,
-    seed: Res<Seed>,
-    time: Res<Time>,
-) {
-    let start_time = time.time_since_startup();
-    let mut chunk_counter: u32 = 0;
-
-    let chunk_size: usize = 16;
-    let noise = OpenSimplex::new();
-    noise.set_seed(seed.value);
-
-    for mut chunk in chunks.iter_mut() {
-        for x in 0 .. chunk_size {
-            for z in 0 .. chunk_size {
-                
-                let rng = thread_rng().gen_range(1 .. 10000);
-
-                let y = (noise.get([
-                    ( (x as i32 + chunk.x * chunk_size as i32) as f32 / 20. ) as f64, 
-                    ( (z as i32 + chunk.z * chunk_size as i32) as f32 / 20. ) as f64,
-                ]) * 20. + 16.0) as usize;
-
-                /*
-                for i in 0 .. y - 4 {
-                    chunk.index[x][i][z] = 2;
-                }
-                for i in y - 4 .. y  {
-                    chunk.index[x][i][z] = 1;
-                }
-                */
-                chunk.index[x][y][z] = 1;
-
-                //generates random stones on surface
-                if rng & 5000 == 0 {
-                    chunk.index[x][y][z] = 2;
-                }
-            }
-        }
-        chunk_counter+=1;
-    }
-    let end_time = time.time_since_startup() - start_time;
-    println!("Generated {} chunks in {:?}", chunk_counter, end_time);
 }
 
 use bevy::render::mesh::Indices;

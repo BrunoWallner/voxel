@@ -1,31 +1,12 @@
 use bevy::prelude::*;
 
-use rand::Rng;
-use rand::thread_rng;
-
 pub struct Materials {
-    blocks: Vec<Handle<StandardMaterial>>,
+    pub blocks: Vec<Handle<StandardMaterial>>,
 }
 
 mod chunk;
 
 pub struct Camera;
-
-pub struct Chunk {
-    pub x: i32,
-    pub z: i32,
-    pub index: [[[u8; 16]; 256]; 16],
-    pub loaded: bool,
-    pub should_load: bool,
-}
-impl Chunk {
-    //creates a new empty chunk filled with air
-    pub fn new(x: i32, z: i32) -> Self {
-        Chunk {x: x, z: z, index: [[[0u8; 16]; 256]; 16], loaded: false, should_load: false}
-    }
-}
-
-pub struct Seed {value: u32}
 
 #[bevy_main]
 fn main() {
@@ -33,15 +14,10 @@ fn main() {
         .add_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
         .add_plugins(DefaultPlugins)
 
-        .add_resource(Seed { value: thread_rng().gen_range(0 .. 4294967295) })
-
         .add_startup_system(setup.system())
 
         .add_startup_stage("ChunkCreation", SystemStage::serial())
         .add_startup_system_to_stage("ChunkCreation",chunk::create_chunk.system())
-
-        .add_startup_stage_after("ChunkCreation", "ChunkGeneration", SystemStage::serial())
-        .add_startup_system_to_stage("ChunkGeneration",chunk::generate_chunk.system())
 
         .add_system(camera_controll.system())
         .add_system(chunk::chunk_loader.system())
@@ -64,7 +40,7 @@ fn setup(
         // Camera
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(-0.1, -0.5, -0.1, 0.5).normalize(),
+                Quat::from_xyzw(-0.5, -0.5, -0.5, 0.5).normalize(),
                 Vec3::new(-10.0, 35.0, 0.0),
             )),
             ..Default::default()
@@ -93,7 +69,7 @@ fn camera_controll(
     mut camera: Query<&mut Transform, With<Camera>>,
     time: Res<Time>,
 ) {
-    let speed = 10.0;
+    let speed = 25.0;
     for mut camera in camera.iter_mut() {
         if keyboard_input.pressed(KeyCode::W) {
             camera.translation.x += speed * time.delta_seconds()
