@@ -114,154 +114,110 @@ pub fn spawn_chunk(
                 for y in 0..256 {
                     for z in 0..16 {
                         if chunk.index[x][y][z] != 0 {
+
+                            //creates vertices
                             for i in 0..2 {
-                                let uv_height = 0.0;
                                 positions.push([x as f32, (y + i) as f32, z as f32]);
-                                normals.push([0., 0., 0.]);
-                                uvs.push([uv_height, uv_height]);
+                                normals.push([x as f32, y as f32, z as f32]);
+                                uvs.push([0.0, 0.0]);
 
                                 positions.push([(x + 1) as f32, (y + i) as f32, z as f32]);
-                                normals.push([0., 0., 0.]);
-                                uvs.push([uv_height, uv_height]);
+                                normals.push([x as f32, y as f32, z as f32]);
+                                uvs.push([0.0, 0.0]);
 
                                 positions.push([(x + 1) as f32, (y + i) as f32, (z + 1) as f32]);
-                                normals.push([0., 0., 0.]);
-                                uvs.push([uv_height, uv_height]);
+                                normals.push([x as f32, y as f32, z as f32]);
+                                uvs.push([0.0, 0.0]);
 
                                 positions.push([x as f32, (y + i) as f32, (z + 1) as f32]);
-                                normals.push([0., 0., 0.]);
-                                uvs.push([uv_height, uv_height]);
+                                normals.push([x as f32, y as f32, z as f32]);
+                                uvs.push([0.0, 0.0]);
                             }
 
                             //creates indices
                         
                             //below plane
+                            let below = create_indices("below", positions.len() as u32);
                             if y >= 1 {
                                 if chunk.index[x][y-1][z] == 0 {
-                                    indices.push((positions.len() - 8 + 0) as u32);
-                                    indices.push((positions.len() - 8 + 1) as u32);
-                                    indices.push((positions.len() - 8 + 3) as u32);
-
-                                    indices.push((positions.len() - 8 + 2) as u32);
-                                    indices.push((positions.len() - 8 + 3) as u32);
-                                    indices.push((positions.len() - 8 + 1) as u32);
+                                    for i in 0..6 {
+                                        indices.push(below[i]);
+                                    }
                                 }
                             } else {
-                                indices.push((positions.len() - 8 + 0) as u32);
-                                indices.push((positions.len() - 8 + 1) as u32);
-                                indices.push((positions.len() - 8 + 3) as u32);
-
-                                indices.push((positions.len() - 8 + 2) as u32);
-                                indices.push((positions.len() - 8 + 3) as u32);
-                                indices.push((positions.len() - 8 + 1) as u32);
+                                for i in 0..6 {
+                                    indices.push(below[i]);
+                                }
                             }
 
-                            //upper plane
+                            //above plane
+                            let above = create_indices("above", positions.len() as u32);
                             if y <= 254 {
                                 if chunk.index[x][y+1][z] == 0 {
-                                    indices.push((positions.len() - 8 + 5) as u32);
-                                    indices.push((positions.len() - 8 + 4) as u32);
-                                    indices.push((positions.len() - 8 + 6) as u32);
-
-                                    indices.push((positions.len() - 8 + 4) as u32);
-                                    indices.push((positions.len() - 8 + 7) as u32);
-                                    indices.push((positions.len() - 8 + 6) as u32);
+                                    for i in 0..6 {
+                                        indices.push(above[i]);
+                                    }
                                 }
                             } else {
-                                indices.push((positions.len() - 8 + 5) as u32);
-                                indices.push((positions.len() - 8 + 4) as u32);
-                                indices.push((positions.len() - 8 + 6) as u32);
-
-                                indices.push((positions.len() - 8 + 4) as u32);
-                                indices.push((positions.len() - 8 + 7) as u32);
-                                indices.push((positions.len() - 8 + 6) as u32);
+                                for i in 0..6 {
+                                    indices.push(above[i]);
+                                }
                             }
-                            
 
                             //left plane
+                            let left = create_indices("left", positions.len() as u32);
                             if z >= 1 {
                                 if chunk.index[x][y][z-1] == 0 {
-                                    indices.push((positions.len() - 8 + 1) as u32);
-                                    indices.push((positions.len() - 8 + 0) as u32);
-                                    indices.push((positions.len() - 8 + 5) as u32);
-
-                                    indices.push((positions.len() - 8 + 0) as u32);
-                                    indices.push((positions.len() - 8 + 4) as u32);
-                                    indices.push((positions.len() - 8 + 5) as u32);
+                                    for i in 0..6 {
+                                        indices.push(left[i]);
+                                    }
                                 }
                             } else {
-                                indices.push((positions.len() - 8 + 1) as u32);
-                                indices.push((positions.len() - 8 + 0) as u32);
-                                indices.push((positions.len() - 8 + 5) as u32);
-
-                                indices.push((positions.len() - 8 + 0) as u32);
-                                indices.push((positions.len() - 8 + 4) as u32);
-                                indices.push((positions.len() - 8 + 5) as u32);
+                                for i in 0..6 {
+                                    indices.push(left[i]);
+                                }
                             }
 
                             //right plane
+                            let right = create_indices("right", positions.len() as u32);
                             if z <= 14 {
                                 if chunk.index[x][y][z+1] == 0 {
-                                    indices.push((positions.len() - 8 + 3) as u32);
-                                    indices.push((positions.len() - 8 + 2) as u32);
-                                    indices.push((positions.len() - 8 + 6) as u32);
-
-                                    indices.push((positions.len() - 8 + 7) as u32);
-                                    indices.push((positions.len() - 8 + 3) as u32);
-                                    indices.push((positions.len() - 8 + 6) as u32);
+                                    for i in 0..6 {
+                                        indices.push(right[i]);
+                                    }
                                 }
                             } else {
-                                indices.push((positions.len() - 8 + 3) as u32);
-                                indices.push((positions.len() - 8 + 2) as u32);
-                                indices.push((positions.len() - 8 + 6) as u32);
-
-                                indices.push((positions.len() - 8 + 7) as u32);
-                                indices.push((positions.len() - 8 + 3) as u32);
-                                indices.push((positions.len() - 8 + 6) as u32);
+                                for i in 0..6 {
+                                    indices.push(right[i]);
+                                }
                             }
                             
-
                             //front plane
+                            let front = create_indices("front", positions.len() as u32);
                             if x >= 1 {
                                if chunk.index[x-1][y][z] == 0 {
-                                    indices.push((positions.len() - 8 + 0) as u32);
-                                    indices.push((positions.len() - 8 + 3) as u32);
-                                    indices.push((positions.len() - 8 + 4) as u32);
-
-                                    indices.push((positions.len() - 8 + 4) as u32);
-                                    indices.push((positions.len() - 8 + 3) as u32);
-                                    indices.push((positions.len() - 8 + 7) as u32);
+                                for i in 0..6 {
+                                    indices.push(front[i]);
+                                }
                                 } 
                             } else {
-                                indices.push((positions.len() - 8 + 0) as u32);
-                                indices.push((positions.len() - 8 + 3) as u32);
-                                indices.push((positions.len() - 8 + 4) as u32);
-
-                                indices.push((positions.len() - 8 + 4) as u32);
-                                indices.push((positions.len() - 8 + 3) as u32);
-                                indices.push((positions.len() - 8 + 7) as u32);
+                                for i in 0..6 {
+                                    indices.push(front[i]);
+                                }
                             }
                             
-
                             //back plane
+                            let back = create_indices("back", positions.len() as u32);
                             if x <= 14 {
                                 if chunk.index[x+1][y][z] == 0 {
-                                    indices.push((positions.len() - 8 + 2) as u32);
-                                    indices.push((positions.len() - 8 + 1) as u32);
-                                    indices.push((positions.len() - 8 + 5) as u32);
-
-                                    indices.push((positions.len() - 8 + 2) as u32);
-                                    indices.push((positions.len() - 8 + 5) as u32);
-                                    indices.push((positions.len() - 8 + 6) as u32);
+                                    for i in 0..6 {
+                                        indices.push(back[i]);
+                                    }
                                 }
                             } else {
-                                indices.push((positions.len() - 8 + 2) as u32);
-                                indices.push((positions.len() - 8 + 1) as u32);
-                                indices.push((positions.len() - 8 + 5) as u32);
-
-                                indices.push((positions.len() - 8 + 2) as u32);
-                                indices.push((positions.len() - 8 + 5) as u32);
-                                indices.push((positions.len() - 8 + 6) as u32);
+                                for i in 0..6 {
+                                    indices.push(back[i]);
+                                }
                             }
                         }
                     }
@@ -292,4 +248,72 @@ pub fn spawn_chunk(
             chunk.loaded = true;
         }       
     }
+}
+
+fn create_indices(
+    side: &str,
+    position_len: u32,
+) -> [u32; 6] {
+    let mut indices: [u32; 6] = [0, 0, 0, 0, 0, 0];
+
+    if side == "below" {
+        indices[0] = (position_len - 8 + 0) as u32;
+        indices[1] = (position_len - 8 + 1) as u32;
+        indices[2] = (position_len - 8 + 3) as u32;
+
+        indices[3] = (position_len - 8 + 2) as u32;
+        indices[4] = (position_len - 8 + 3) as u32;
+        indices[5] = (position_len - 8 + 1) as u32;
+    }
+
+    if side == "above" {
+        indices[0] = (position_len - 8 + 5) as u32;
+        indices[1] = (position_len - 8 + 4) as u32;
+        indices[2] = (position_len - 8 + 6) as u32;
+
+        indices[3] = (position_len - 8 + 4) as u32;
+        indices[4] = (position_len - 8 + 7) as u32;
+        indices[5] = (position_len - 8 + 6) as u32;
+    }
+
+    if side == "left" {
+        indices[0] = (position_len - 8 + 1) as u32;
+        indices[1] = (position_len - 8 + 0) as u32;
+        indices[2] = (position_len - 8 + 5) as u32;
+
+        indices[3] = (position_len - 8 + 0) as u32;
+        indices[4] = (position_len - 8 + 4) as u32;
+        indices[5] = (position_len - 8 + 5) as u32;
+    }
+
+    if side == "right" {
+        indices[0] = (position_len - 8 + 3) as u32;
+        indices[1] = (position_len - 8 + 2) as u32;
+        indices[2] = (position_len - 8 + 6) as u32;
+
+        indices[3] = (position_len - 8 + 7) as u32;
+        indices[4] = (position_len - 8 + 3) as u32;
+        indices[5] = (position_len - 8 + 6) as u32;        
+    }
+
+    if side == "front" {
+        indices[0] = (position_len - 8 + 0) as u32;
+        indices[1] = (position_len - 8 + 3) as u32;
+        indices[2] = (position_len - 8 + 4) as u32;
+
+        indices[3] = (position_len - 8 + 4) as u32;
+        indices[4] = (position_len - 8 + 3) as u32;
+        indices[5] = (position_len - 8 + 7) as u32;        
+    }
+
+    if side == "back" {
+        indices[0] = (position_len - 8 + 2) as u32;
+        indices[1] = (position_len - 8 + 1) as u32;
+        indices[2] = (position_len - 8 + 5) as u32;
+
+        indices[3] = (position_len - 8 + 2) as u32;
+        indices[4] = (position_len - 8 + 5) as u32;
+        indices[5] = (position_len - 8 + 6) as u32;
+    }
+    indices
 }

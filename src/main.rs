@@ -1,5 +1,6 @@
 use bevy::prelude::*;
 
+
 use bevy_flycam::NoCameraPlayerPlugin;
 use bevy_flycam::FlyCam;
 use bevy_flycam::MovementSettings;
@@ -7,6 +8,7 @@ use bevy_flycam::MovementSettings;
 pub struct Materials {
     pub blocks: Vec<Handle<StandardMaterial>>,
 }
+
 
 mod chunk;
 
@@ -20,7 +22,7 @@ fn main() {
 
         .add_plugin(NoCameraPlayerPlugin)
         .add_resource(MovementSettings {
-            sensitivity: 0.000050, // default: 0.00012
+            sensitivity: 0.000020, // default: 0.00012
             speed: 15.0, // default: 12.0
         })
 
@@ -41,7 +43,7 @@ fn setup(
 ) {
     commands
         .spawn(LightBundle {
-            transform: Transform::from_translation(Vec3::new(100.0, 10000000.0, -120.0)),
+            transform: Transform::from_translation(Vec3::new(0.0, 100.0, 0.0)),
             ..Default::default()
         })
         // Camera
@@ -54,6 +56,7 @@ fn setup(
         })
         .with(Camera)
         .with(FlyCam);
+        
 
         let grass_material_handle = asset_server.load("textures/grass.png");
         let stone_material_handle = asset_server.load("textures/stone.png");
