@@ -13,17 +13,19 @@ pub struct Materials {
 mod chunk;
 
 pub struct Camera;
+pub struct Light;
 
 #[bevy_main]
 fn main() {
     App::build()
         .add_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
+
         .add_plugins(DefaultPlugins)
 
         .add_plugin(NoCameraPlayerPlugin)
         .add_resource(MovementSettings {
             sensitivity: 0.000020, // default: 0.00012
-            speed: 15.0, // default: 12.0
+            speed: 115.0, // default: 12.0
         })
 
         .add_startup_system(setup.system())
@@ -31,6 +33,7 @@ fn main() {
         //.add_system(camera_controll.system())
         .add_system(chunk::chunk_loader.system())
         .add_system(chunk::spawn_chunk.system())
+        .add_system(chunk::chunk_unloader.system())
 
         .run();
 }
@@ -42,15 +45,24 @@ fn setup(
     asset_server: Res<AssetServer>,
 ) {
     commands
+        // Clear Color
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.2, 0.1)))
+        
+        // Light
         .spawn(LightBundle {
-            transform: Transform::from_translation(Vec3::new(0.0, 100.0, 0.0)),
+            transform: Transform::from_matrix(Mat4::from_rotation_translation(
+                Quat::from_xyzw(0.0, 0.0, 0.0, 0.0).normalize(),
+                Vec3::new(0.0, 1000000000.0, 0.0),
+            )),
             ..Default::default()
         })
+        .with(Light)
+
         // Camera
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(-0.1, -0.5, -0.1, 0.5).normalize(),
-                Vec3::new(-10.0, 35.0, 0.0),
+                Quat::from_xyzw(-0.1, 0.0, -0.5, 0.5).normalize(),
+                Vec3::new(0.0, 0.0, 0.0),
             )),
             ..Default::default()
         })

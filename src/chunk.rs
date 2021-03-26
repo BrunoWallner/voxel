@@ -3,6 +3,7 @@ use bevy::render::pipeline::PrimitiveTopology;
 
 use noise::NoiseFn;
 use noise::OpenSimplex;
+use noise::Perlin;
 use noise::Seedable;
 
 pub struct Chunk {
@@ -19,24 +20,38 @@ impl Chunk {
     }
 }
 
+pub struct RenderedChunk {
+    x: i32,
+    z: i32,
+}
+
 pub fn generate_chunk_index(
     seed: u32,
     chunk_x: i32,
     chunk_z: i32,
 ) -> [[[u8; 16]; 256]; 16] {
 
-    let chunk_size: usize = 16;
-    let noise = OpenSimplex::new();
-    noise.set_seed(seed);
+    let open_simplex = OpenSimplex::new();
+    open_simplex.set_seed(seed);
+
+    let perlin = Perlin::new();
+    perlin.set_seed(seed);
 
     let mut index: [[[u8; 16]; 256]; 16] = [[[0u8; 16]; 256]; 16];
 
-    for x in 0 .. chunk_size {
-        for z in 0 .. chunk_size {
-            let y = (noise.get([
-                ( (x as i32 + chunk_x * 16 as i32) as f32 / 20. ) as f64, 
-                ( (z as i32 + chunk_z * 16 as i32) as f32 / 20. ) as f64,
+    for x in 0 .. 16 {
+        for z in 0 .. 16 {
+            let mut y = (open_simplex.get([
+                ( (x as i32 + chunk_x * 16 as i32) as f32 / 30. ) as f64, 
+                ( (z as i32 + chunk_z * 16 as i32) as f32 / 30. ) as f64,
             ]) * 20. + 16.0) as usize;
+
+            let y2 = (perlin.get([
+                ( (x as i32 + chunk_x * 16 as i32) as f32 / 150. ) as f64,
+                ( (z as i32 + chunk_z * 16 as i32) as f32 / 150. ) as f64,
+            ]) * 20. + 5.0) as usize;
+
+            y += y2;
 
             index[x][y][z] = 1;
 
@@ -90,6 +105,38 @@ pub fn chunk_loader(
     }   
 }
 
+pub fn chunk_unloader(
+    camera: Query<&Transform, With<Camera>>,
+    mut rendered_chunk: Query<(&RenderedChunk, Entity), With<RenderedChunk>>,
+    mut chunk: Query<(&Chunk, Entity), With<Chunk>>,
+    commands: &mut Commands,
+) {
+    let render_distance: i32 = 10;
+    
+    let mut camera_chunk: [i32; 2] = [0, 0];
+    for camera in camera.iter() {
+        camera_chunk = [(camera.translation.x / 16.0) as i32, (camera.translation.z / 16.0) as i32]
+    }
+
+    for (chunk, entity) in rendered_chunk.iter_mut() {
+        if chunk.x > camera_chunk[0] + render_distance
+        || chunk.x < camera_chunk[0] - render_distance
+        || chunk.z > camera_chunk[1] + render_distance
+        || chunk.z < camera_chunk[1] - render_distance {
+            commands.despawn(entity);
+        }
+    }
+    for (chunk, entity) in chunk.iter_mut() {
+        if chunk.x > camera_chunk[0] + render_distance
+        || chunk.x < camera_chunk[0] - render_distance
+        || chunk.z > camera_chunk[1] + render_distance
+        || chunk.z < camera_chunk[1] - render_distance {
+            commands.despawn(entity);
+        }
+    }
+
+}
+
 use bevy::render::mesh::Indices;
 
 pub fn spawn_chunk(
@@ -118,19 +165,19 @@ pub fn spawn_chunk(
                             //creates vertices
                             for i in 0..2 {
                                 positions.push([x as f32, (y + i) as f32, z as f32]);
-                                normals.push([x as f32, y as f32, z as f32]);
+                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
                                 uvs.push([0.0, 0.0]);
 
                                 positions.push([(x + 1) as f32, (y + i) as f32, z as f32]);
-                                normals.push([x as f32, y as f32, z as f32]);
+                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
                                 uvs.push([0.0, 0.0]);
 
                                 positions.push([(x + 1) as f32, (y + i) as f32, (z + 1) as f32]);
-                                normals.push([x as f32, y as f32, z as f32]);
+                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
                                 uvs.push([0.0, 0.0]);
 
                                 positions.push([x as f32, (y + i) as f32, (z + 1) as f32]);
-                                normals.push([x as f32, y as f32, z as f32]);
+                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
                                 uvs.push([0.0, 0.0]);
                             }
 
@@ -242,7 +289,8 @@ pub fn spawn_chunk(
                         Vec3::new((chunk.x * 16) as f32, 0.0, (chunk.z * 16) as f32),
                     )),
                     ..Default::default()
-                });
+                })
+                .with(RenderedChunk {x: chunk.x, z: chunk.z});
 
             chunk.should_load = false;
             chunk.loaded = true;
