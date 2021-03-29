@@ -6,7 +6,7 @@ use bevy_flycam::FlyCam;
 use bevy_flycam::MovementSettings;
 
 pub struct Materials {
-    pub blocks: Vec<Handle<StandardMaterial>>,
+    pub blocks: Handle<StandardMaterial>,
 }
 
 
@@ -29,11 +29,13 @@ fn main() {
         })
 
         .add_startup_system(setup.system())
+        .add_startup_system(chunk::spawn_world.system())
 
-        //.add_system(camera_controll.system())
-        .add_system(chunk::chunk_loader.system())
-        .add_system(chunk::spawn_chunk.system())
-        .add_system(chunk::chunk_unloader.system())
+        .add_startup_stage("spawn", SystemStage::serial())
+        .add_startup_system_to_stage("spawn", chunk::generate_spawn.system())
+
+        .add_startup_stage("render", SystemStage::serial())
+        .add_startup_system_to_stage("render", chunk::render_chunk.system())
 
         .run();
 }
@@ -70,17 +72,9 @@ fn setup(
         .with(FlyCam);
         
 
-        let grass_material_handle = asset_server.load("textures/grass.png");
-        let stone_material_handle = asset_server.load("textures/stone.png");
+        let block_texture_handle = asset_server.load("textures/blocks.png");
 
-        let air = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), ..Default::default() }); 
-        let grass = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(grass_material_handle.clone()), ..Default::default() });
-        let stone = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(stone_material_handle.clone()), ..Default::default() }); 
-
-        let mut blocks: Vec<Handle<StandardMaterial>> = vec![];
-        blocks.push(air);
-        blocks.push(grass);
-        blocks.push(stone);
+        let blocks = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(block_texture_handle.clone()), ..Default::default() });
 
         commands.insert_resource(Materials {
             blocks: blocks,
