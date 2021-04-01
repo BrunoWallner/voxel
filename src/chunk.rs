@@ -49,7 +49,7 @@ pub fn generate_spawn(
     let radius = 5;
     for mut world in world.iter_mut() {
         for x in -radius..radius {
-            for y in 0..radius*2 {
+            for y in -radius..radius {
                 for z in -radius..radius {
                     world.chunk_index.push(Chunk::new(x, y, z));
 
@@ -79,12 +79,20 @@ fn generate_terrain(
             let height: u32 = (open_simplex.get([
                 ( (x as i32 + chunk_x * 32 as i32) as f32 / 15. ) as f64, 
                 ( (z as i32 + chunk_z * 32 as i32) as f32 / 15. ) as f64,
-            ]) * 15. + 20.0) as u32;
+            ]) * 15. + 32.0) as u32;
 
             //writes height into terrain block index:
             if height >= (chunk_y*32) as u32
             && height <= (chunk_y*32 + 31) as u32 {
                 terrain[x][(height - (chunk_y*32) as u32) as usize][z] = 1;
+            }
+
+            //generates dirt
+            for height2 in 0..height-1 {
+                if height2 >= (chunk_y*32) as u32
+                && height2 <= (chunk_y*32 + 31) as u32 {
+                    terrain[x][(height2 - (chunk_y*32) as u32) as usize][z] = 2;
+                }
             }
         }
     }
@@ -141,28 +149,50 @@ fn create_chunk_mesh(
     for x in 0..32 {
         for y in 0..32 {
             for z in 0..32 {
-                if world.chunk_index[chunk].index[x][y][z] != 0 {
 
-                    //creates vertices
-                    let uv1: f32 = 0.0;
-                    let uv2: f32 = 0.1;
-                    for i in 0..2 {
-                        positions.push([x as f32, (y + i) as f32, z as f32]);
-                        normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                        uvs.push([uv1, uv2]);
+                let block: u8 = world.chunk_index[chunk].index[x][y][z];
+                
+                if block != 0 {
 
-                        positions.push([(x + 1) as f32, (y + i) as f32, z as f32]);
-                        normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                        uvs.push([uv1, uv2]);
+                    /* CREATES VERTICES */
+                    
+                    //bottom vertices of cube
+                    positions.push([x as f32, y as f32, z as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 0.0, 0.0 ]);
 
-                        positions.push([(x + 1) as f32, (y + i) as f32, (z + 1) as f32]);
-                        normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                        uvs.push([uv1, uv2]);
+                    positions.push([(x + 1) as f32, y as f32, z as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 0.0, 1.0 ]);
 
-                        positions.push([x as f32, (y + i) as f32, (z + 1) as f32]);
-                        normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                        uvs.push([uv1, uv2]);
-                    }
+                    positions.push([(x + 1) as f32, y as f32, (z + 1) as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 1.0, 1.0 ]);
+
+                    positions.push([x as f32, y as f32, (z + 1) as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 1.0, 0.0 ]);
+
+
+                    //upper vertices of cube
+                    positions.push([x as f32, (y + 1) as f32, z as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 0.0, 1.0 ]);
+
+                    positions.push([(x + 1) as f32, (y + 1) as f32, z as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 0.0, 0.0 ]);
+
+                    positions.push([(x + 1) as f32, (y + 1) as f32, (z + 1) as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 0.0, 1.0 ]);
+
+                    positions.push([x as f32, (y + 1) as f32, (z + 1) as f32]);
+                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
+                    uvs.push([ 1.0, 1.0 ]);
+
+
+                    
 
                     //creates indices
                 

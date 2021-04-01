@@ -63,8 +63,8 @@ fn setup(
         // Camera
         .spawn(Camera3dBundle {
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(-0.1, 0.0, -0.5, 0.5).normalize(),
-                Vec3::new(0.0, 0.0, 0.0),
+                Quat::from_xyzw(0.0, 0.0, 0.0, 0.5).normalize(),
+                Vec3::new(-200.0, 25.0, 0.0),
             )),
             ..Default::default()
         })
