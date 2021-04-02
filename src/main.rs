@@ -25,7 +25,7 @@ fn main() {
         .add_plugin(NoCameraPlayerPlugin)
         .add_resource(MovementSettings {
             sensitivity: 0.000020, // default: 0.00012
-            speed: 115.0, // default: 12.0
+            speed: 25.0, // default: 12.0
         })
 
         .add_startup_system(setup.system())
@@ -55,6 +55,15 @@ fn setup(
             transform: Transform::from_matrix(Mat4::from_rotation_translation(
                 Quat::from_xyzw(0.0, 0.0, 0.0, 0.0).normalize(),
                 Vec3::new(0.0, 1000000000.0, 0.0),
+            )),
+            ..Default::default()
+        })
+        .with(Light)
+
+        .spawn(LightBundle {
+            transform: Transform::from_matrix(Mat4::from_rotation_translation(
+                Quat::from_xyzw(0.0, 0.0, 0.0, 0.0).normalize(),
+                Vec3::new(0.0, -1000000000.0, 0.0),
             )),
             ..Default::default()
         })

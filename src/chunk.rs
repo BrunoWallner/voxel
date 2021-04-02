@@ -46,7 +46,7 @@ pub fn spawn_world(
 pub fn generate_spawn(
     mut world: Query<&mut World, With<World>>
 ) {
-    let radius = 5;
+    let radius = 3;
     for mut world in world.iter_mut() {
         for x in -radius..radius {
             for y in -radius..radius {
@@ -76,24 +76,55 @@ fn generate_terrain(
     for x in 0..32 {
         for z in 0..32 {
             //generates terrain with noise:
-            let height: u32 = (open_simplex.get([
+            let height: i32 = (open_simplex.get([
                 ( (x as i32 + chunk_x * 32 as i32) as f32 / 15. ) as f64, 
                 ( (z as i32 + chunk_z * 32 as i32) as f32 / 15. ) as f64,
-            ]) * 15. + 32.0) as u32;
+            ]) * 15. + 48.0) as i32;
+
+            let height_stalagmites: i32 = (open_simplex.get([
+                ( (x as i32 + chunk_x * 5 as i32) as f32 / 5. ) as f64, 
+                ( (z as i32 + chunk_z * 5 as i32) as f32 / 5. ) as f64,
+            ]) * 42. + 15.) as i32;
 
             //writes height into terrain block index:
-            if height >= (chunk_y*32) as u32
-            && height <= (chunk_y*32 + 31) as u32 {
-                terrain[x][(height - (chunk_y*32) as u32) as usize][z] = 1;
-            }
-
-            //generates dirt
-            for height2 in 0..height-1 {
-                if height2 >= (chunk_y*32) as u32
-                && height2 <= (chunk_y*32 + 31) as u32 {
-                    terrain[x][(height2 - (chunk_y*32) as u32) as usize][z] = 2;
+            for height_grass in height-3..height {
+                if height_grass >= (chunk_y*32) as i32
+                && height_grass <= (chunk_y*32 + 31) as i32 {
+                    terrain[x][(height_grass - (chunk_y*32) as i32) as usize][z] = 1;
                 }
             }
+            
+
+            //generates dirt
+            for height_dirt in height-13..height-3 {
+                if height_dirt >= (chunk_y*32) as i32
+                && height_dirt <= (chunk_y*32 + 31) as i32 {
+                    terrain[x][(height_dirt - (chunk_y*32) as i32) as usize][z] = 2;
+                }
+            }
+
+            //generates stone
+            for height_stone in -5..height-13 {
+                if height_stone >= (chunk_y*32) as i32
+                && height_stone <= (chunk_y*32 + 31) as i32 {
+                    terrain[x][(height_stone - (chunk_y*32) as i32) as usize][z] = 3;
+                }
+            }
+
+            //creates stalagmites
+            for stalagmite in height as i32 - 64..height as i32 / 2 - 22 {
+                if stalagmite >= (chunk_y*32) as i32
+                && stalagmite <= (chunk_y*32 + 31) as i32 {
+                    terrain[x][(stalagmite - (chunk_y*32) as i32) as usize][z] = 5;
+                }
+            }
+            for stalagmite in -height_stalagmites..height as i32 - 64 {
+                if stalagmite >= (chunk_y*32) as i32
+                && stalagmite <= (chunk_y*32 + 31) as i32 {
+                    terrain[x][(stalagmite - (chunk_y*32) as i32) as usize][z] = 4;
+                }
+            }
+
         }
     }
     terrain
@@ -144,90 +175,159 @@ fn create_chunk_mesh(
     let mut normals: Vec<[f32; 3]> = Vec::with_capacity(v_length);
     let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(v_length);
 
-    let mut indices: Vec<u32> = Vec::with_capacity(v_length / 8);
+    let mut indices: Vec<u32> = Vec::with_capacity(v_length);
 
-    for x in 0..32 {
-        for y in 0..32 {
-            for z in 0..32 {
+    for x1 in 0..32 {
+        for y1 in 0..32 {
+            for z1 in 0..32 {
 
-                let block: u8 = world.chunk_index[chunk].index[x][y][z];
+                let x: f32 = x1 as f32;
+                let y: f32 = y1 as f32;
+                let z: f32= z1 as f32;
+
+                let block: u8 = world.chunk_index[chunk].index[x1][y1][z1];
+
+                let world_x = world.chunk_index[chunk].x as f32 * 32.0 + x;
+                let world_y = world.chunk_index[chunk].y as f32 * 32.0 + y;
+                let world_z = world.chunk_index[chunk].z as f32 * 32.0 + z;
                 
-                if block != 0 {
+                if block != 0 { 
 
-                    /* CREATES VERTICES */
-                    
-                    //bottom vertices of cube
-                    positions.push([x as f32, y as f32, z as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 0.0, 0.0 ]);
+                    // left side
+                    positions.push([ x, y, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 0.0 ]);
 
-                    positions.push([(x + 1) as f32, y as f32, z as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 0.0, 1.0 ]);
+                    positions.push([ x + 1.0, y, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
 
-                    positions.push([(x + 1) as f32, y as f32, (z + 1) as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 1.0, 1.0 ]);
+                    positions.push([ x, y + 1.0, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 1.0 ]);
 
-                    positions.push([x as f32, y as f32, (z + 1) as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 1.0, 0.0 ]);
+                    positions.push([ x + 1.0, y + 1.0, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
 
 
-                    //upper vertices of cube
-                    positions.push([x as f32, (y + 1) as f32, z as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 0.0, 1.0 ]);
+                    // rear side
+                    positions.push([ x + 1.0, y, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 0.0 ]);
 
-                    positions.push([(x + 1) as f32, (y + 1) as f32, z as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 0.0, 0.0 ]);
+                    positions.push([ x + 1.0, y, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
 
-                    positions.push([(x + 1) as f32, (y + 1) as f32, (z + 1) as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 0.0, 1.0 ]);
+                    positions.push([ x + 1.0, y + 1.0, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 1.0 ]);
 
-                    positions.push([x as f32, (y + 1) as f32, (z + 1) as f32]);
-                    normals.push([ (world.chunk_index[chunk].x*32 + x as i32) as f32, (world.chunk_index[chunk].y*32 + y as i32) as f32, (world.chunk_index[chunk].z*32 + z as i32) as f32  ]);
-                    uvs.push([ 1.0, 1.0 ]);
+                    positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
 
 
-                    
+                    // right side
+                    positions.push([ x, y, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x + 1.0, y, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x, y + 1.0, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                    positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+
+
+                    // front side
+                    positions.push([ x, y, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x, y, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x, y + 1.0, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                    positions.push([ x, y + 1.0, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+
+
+                    // bottom side
+                    positions.push([ x, y, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x, y, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x + 1.0, y, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                    positions.push([ x + 1.0, y, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+
+
+                    // upper side
+                    positions.push([ x, y + 1.0, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x, y + 1.0, z + 1.0 ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+
+                    positions.push([ x + 1.0, y + 1.0, z ]);
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                    positions.push([ x + 1.0, y + 1.0, z + 1.0] );
+                    normals.push([ world_x, world_y, world_z ]);
+                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+
+
 
                     //creates indices
                 
                     //below plane
                     let below = create_indices("below", positions.len() as u32);
-                    if y >= 1 {
-                        if world.chunk_index[chunk].index[x][y-1][z] == 0 {
-                            for i in 0..6 {
-                                indices.push(below[i]);
-                            }
+                    if y as usize >= 1 {
+                        if world.chunk_index[chunk].index[x1][y1-1][z1] == 0 {
+                            for i in 0..6 { indices.push(below[i]) }
                         }
                     } else {
-                        for i in 0..6 {
-                            indices.push(below[i]);
-                        }
+                        for i in 0..6 { indices.push(below[i]) }
                     }
 
                     //above plane
                     let above = create_indices("above", positions.len() as u32);
-                    if y <= 30 {
-                        if world.chunk_index[chunk].index[x][y+1][z] == 0 {
-                            for i in 0..6 {
-                                indices.push(above[i]);
-                            }
+                    if y as usize <= 30 {
+                        if world.chunk_index[chunk].index[x1][y1+1][z1] == 0 {
+                            for i in 0..6 { indices.push(above[i]) }
                         }
                     } else {
-                        for i in 0..6 {
-                            indices.push(above[i]);
-                        }
+                        for i in 0..6 { indices.push(above[i]) }
                     }
 
                     //left plane
                     let left = create_indices("left", positions.len() as u32);
-                    if z >= 1 {
-                        if world.chunk_index[chunk].index[x][y][z-1] == 0 {
+                    if z as usize >= 1 {
+                        if world.chunk_index[chunk].index[x1][y1][z1-1] == 0 {
                             for i in 0..6 {
                                 indices.push(left[i]);
                             }
@@ -240,8 +340,8 @@ fn create_chunk_mesh(
 
                     //right plane
                     let right = create_indices("right", positions.len() as u32);
-                    if z <= 30 {
-                        if world.chunk_index[chunk].index[x][y][z+1] == 0 {
+                    if z as usize <= 30 {
+                        if world.chunk_index[chunk].index[x1][y1][z1+1] == 0 {
                             for i in 0..6 {
                                 indices.push(right[i]);
                             }
@@ -254,8 +354,8 @@ fn create_chunk_mesh(
                     
                     //front plane
                     let front = create_indices("front", positions.len() as u32);
-                    if x >= 1 {
-                       if world.chunk_index[chunk].index[x-1][y][z] == 0 {
+                    if x as usize >= 1 {
+                       if world.chunk_index[chunk].index[x1-1][y1][z1] == 0 {
                         for i in 0..6 {
                             indices.push(front[i]);
                         }
@@ -268,8 +368,8 @@ fn create_chunk_mesh(
                     
                     //back plane
                     let back = create_indices("back", positions.len() as u32);
-                    if x <= 30 {
-                        if world.chunk_index[chunk].index[x+1][y][z] == 0 {
+                    if x as usize <= 30 {
+                        if world.chunk_index[chunk].index[x1+1][y1][z1] == 0 {
                             for i in 0..6 {
                                 indices.push(back[i]);
                             }
@@ -283,7 +383,6 @@ fn create_chunk_mesh(
             }
         }
     }
-
 
     mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
@@ -303,428 +402,62 @@ fn create_indices(
 
     if side == "below" {
         indices[0] = (position_len - 8 + 0) as u32;
-        indices[1] = (position_len - 8 + 1) as u32;
-        indices[2] = (position_len - 8 + 3) as u32;
+        indices[1] = (position_len - 8 + 2) as u32;
+        indices[2] = (position_len - 8 + 1) as u32;
 
-        indices[3] = (position_len - 8 + 2) as u32;
-        indices[4] = (position_len - 8 + 3) as u32;
-        indices[5] = (position_len - 8 + 1) as u32;
+        indices[3] = (position_len - 8 + 3) as u32;
+        indices[4] = (position_len - 8 + 1) as u32;
+        indices[5] = (position_len - 8 + 2) as u32;
     }
 
     if side == "above" {
-        indices[0] = (position_len - 8 + 5) as u32;
-        indices[1] = (position_len - 8 + 4) as u32;
-        indices[2] = (position_len - 8 + 6) as u32;
+        indices[0] = (position_len - 4 + 2) as u32;
+        indices[1] = (position_len - 4 + 0) as u32;
+        indices[2] = (position_len - 4 + 3) as u32;
 
-        indices[3] = (position_len - 8 + 4) as u32;
-        indices[4] = (position_len - 8 + 7) as u32;
-        indices[5] = (position_len - 8 + 6) as u32;
+        indices[3] = (position_len - 4 + 0) as u32;
+        indices[4] = (position_len - 4 + 1) as u32;
+        indices[5] = (position_len - 4 + 3) as u32;
     }
 
     if side == "left" {
-        indices[0] = (position_len - 8 + 1) as u32;
-        indices[1] = (position_len - 8 + 0) as u32;
-        indices[2] = (position_len - 8 + 5) as u32;
+        indices[0] = (position_len - 24 + 1) as u32;
+        indices[1] = (position_len - 24 + 0) as u32;
+        indices[2] = (position_len - 24 + 3) as u32;
 
-        indices[3] = (position_len - 8 + 0) as u32;
-        indices[4] = (position_len - 8 + 4) as u32;
-        indices[5] = (position_len - 8 + 5) as u32;
+        indices[3] = (position_len - 24 + 0) as u32;
+        indices[4] = (position_len - 24 + 2) as u32;
+        indices[5] = (position_len - 24 + 3) as u32;
     }
 
     if side == "right" {
-        indices[0] = (position_len - 8 + 3) as u32;
-        indices[1] = (position_len - 8 + 2) as u32;
-        indices[2] = (position_len - 8 + 6) as u32;
+        indices[0] = (position_len - 16 + 0) as u32;
+        indices[1] = (position_len - 16 + 1) as u32;
+        indices[2] = (position_len - 16 + 3) as u32;
 
-        indices[3] = (position_len - 8 + 7) as u32;
-        indices[4] = (position_len - 8 + 3) as u32;
-        indices[5] = (position_len - 8 + 6) as u32;        
+        indices[3] = (position_len - 16 + 2) as u32;
+        indices[4] = (position_len - 16 + 0) as u32;
+        indices[5] = (position_len - 16 + 3) as u32;        
     }
 
     if side == "front" {
-        indices[0] = (position_len - 8 + 0) as u32;
-        indices[1] = (position_len - 8 + 3) as u32;
-        indices[2] = (position_len - 8 + 4) as u32;
+        indices[0] = (position_len - 12 + 0) as u32;
+        indices[1] = (position_len - 12 + 1) as u32;
+        indices[2] = (position_len - 12 + 2) as u32;
 
-        indices[3] = (position_len - 8 + 4) as u32;
-        indices[4] = (position_len - 8 + 3) as u32;
-        indices[5] = (position_len - 8 + 7) as u32;        
+        indices[3] = (position_len - 12 + 2) as u32;
+        indices[4] = (position_len - 12 + 1) as u32;
+        indices[5] = (position_len - 12 + 3) as u32;        
     }
 
     if side == "back" {
-        indices[0] = (position_len - 8 + 2) as u32;
-        indices[1] = (position_len - 8 + 1) as u32;
-        indices[2] = (position_len - 8 + 5) as u32;
+        indices[0] = (position_len - 20 + 1) as u32;
+        indices[1] = (position_len - 20 + 0) as u32;
+        indices[2] = (position_len - 20 + 2) as u32;
 
-        indices[3] = (position_len - 8 + 2) as u32;
-        indices[4] = (position_len - 8 + 5) as u32;
-        indices[5] = (position_len - 8 + 6) as u32;
+        indices[3] = (position_len - 20 + 1) as u32;
+        indices[4] = (position_len - 20 + 2) as u32;
+        indices[5] = (position_len - 20 + 3) as u32;
     }
     indices
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-/* Chunk spawning and despawning
-
-use crate::Materials;
-
-use std::time::Duration;
-
-pub struct ChunkTickTimer(Timer);
-impl Default for ChunkTickTimer {
-    fn default() -> Self {
-        Self(Timer::new(Duration::from_millis(100), true))
-    }
-}
-
-pub fn chunk_loader(
-    camera: Query<&Transform, With<Camera>>,
-    mut chunk: Query<&mut Chunk, With<Chunk>>,
-    commands: &mut Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    time: Res<Time>,
-    mut chunk_tick_timer: Local<ChunkTickTimer>,
-) {
-    if chunk_tick_timer.0.tick(time.delta_seconds()).finished() {
-        let render_distance: i32 = 10;
-
-        //creates empty chunk if needed
-        for x in -render_distance..render_distance {
-            for z in -render_distance..render_distance {
-                let mut camera_chunk: [i32; 2] = [0, 0];
-                let mut is_empty_chunk: bool = false;
-
-                for camera in camera.iter() {
-                    camera_chunk = [(camera.translation.x / 16.0 + x as f32) as i32, (camera.translation.z / 16.0 + z as f32) as i32]
-                }
-                for chunk in chunk.iter_mut() {
-                    if chunk.x == camera_chunk[0]
-                    && chunk.z == camera_chunk[1] {
-                        is_empty_chunk = true;
-                    }
-                }
-
-                if !is_empty_chunk {
-                    commands
-                    .spawn(PbrBundle {
-                        mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
-                        transform: Transform::from_translation(Vec3::new((camera_chunk[0]*16 + 8) as f32, 0.0, (camera_chunk[1]*16 + 8) as f32)),
-                        ..Default::default()
-                    })
-                    .with(Chunk::new(camera_chunk[0], camera_chunk[1]));
-                }
-            }
-        }
-    }
-}
-
-
-pub fn chunk_unloader(
-    camera: Query<&Transform, With<Camera>>,
-    mut rendered_chunk: Query<(&RenderedChunk, Entity), With<RenderedChunk>>,
-    mut chunk: Query<(&Chunk, Entity), With<Chunk>>,
-    commands: &mut Commands,
-    time: Res<Time>,
-    mut chunk_tick_timer: Local<ChunkTickTimer>,
-) {
-    if chunk_tick_timer.0.tick(time.delta_seconds()).finished() {
-        let render_distance: i32 = 15;
-        
-        let mut camera_chunk: [i32; 2] = [0, 0];
-        for camera in camera.iter() {
-            camera_chunk = [(camera.translation.x / 16.0) as i32, (camera.translation.z / 16.0) as i32]
-        }
-
-        for (chunk, entity) in rendered_chunk.iter_mut() {
-            if chunk.x > camera_chunk[0] + render_distance
-            || chunk.x < camera_chunk[0] - render_distance
-            || chunk.z > camera_chunk[1] + render_distance
-            || chunk.z < camera_chunk[1] - render_distance {
-                commands.despawn(entity);
-            }
-        }
-        for (chunk, entity) in chunk.iter_mut() {
-            if chunk.x > camera_chunk[0] + render_distance
-            || chunk.x < camera_chunk[0] - render_distance
-            || chunk.z > camera_chunk[1] + render_distance
-            || chunk.z < camera_chunk[1] - render_distance {
-                commands.despawn(entity);
-            }
-        }
-    }
-}
-
-use bevy::render::mesh::Indices;
-
-pub fn spawn_chunk(
-    commands: &mut Commands,
-    materials: Res<Materials>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut chunks: Query<&mut Chunk, With<Chunk>>,
-) {
-    for mut chunk in chunks.iter_mut() {
-
-        if chunk.should_load {
-
-            let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
-            let v_length = 8*16*16*256;
-
-            let mut positions: Vec<[f32; 3]> = Vec::with_capacity(v_length);
-            let mut normals: Vec<[f32; 3]> = Vec::with_capacity(v_length);
-            let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(v_length);
-
-            let mut indices: Vec<u32> = Vec::with_capacity(v_length / 8);
-        
-            for x in 0..16 {
-                for y in 0..256 {
-                    for z in 0..16 {
-                        if chunk.index[x][y][z] != 0 {
-
-                            //creates vertices
-                            let uv1: f32 = 0.1;
-                            let uv2: f32 = 0.2;
-                            for i in 0..2 {
-                                positions.push([x as f32, (y + i) as f32, z as f32]);
-                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
-                                uvs.push([uv1, uv2]);
-
-                                positions.push([(x + 1) as f32, (y + i) as f32, z as f32]);
-                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
-                                uvs.push([uv1, uv2]);
-
-                                positions.push([(x + 1) as f32, (y + i) as f32, (z + 1) as f32]);
-                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
-                                uvs.push([uv1, uv2]);
-
-                                positions.push([x as f32, (y + i) as f32, (z + 1) as f32]);
-                                normals.push([ (chunk.x*16 + x as i32) as f32, y as f32, (chunk.z*16 + z as i32) as f32  ]);
-                                uvs.push([uv1, uv2]);
-                            }
-
-                            //creates indices
-                        
-                            //below plane
-                            let below = create_indices("below", positions.len() as u32);
-                            if y >= 1 {
-                                if chunk.index[x][y-1][z] == 0 {
-                                    for i in 0..6 {
-                                        indices.push(below[i]);
-                                    }
-                                }
-                            } else {
-                                for i in 0..6 {
-                                    indices.push(below[i]);
-                                }
-                            }
-
-                            //above plane
-                            let above = create_indices("above", positions.len() as u32);
-                            if y <= 254 {
-                                if chunk.index[x][y+1][z] == 0 {
-                                    for i in 0..6 {
-                                        indices.push(above[i]);
-                                    }
-                                }
-                            } else {
-                                for i in 0..6 {
-                                    indices.push(above[i]);
-                                }
-                            }
-
-                            //left plane
-                            let left = create_indices("left", positions.len() as u32);
-                            if z >= 1 {
-                                if chunk.index[x][y][z-1] == 0 {
-                                    for i in 0..6 {
-                                        indices.push(left[i]);
-                                    }
-                                }
-                            } else {
-                                for i in 0..6 {
-                                    indices.push(left[i]);
-                                }
-                            }
-
-                            //right plane
-                            let right = create_indices("right", positions.len() as u32);
-                            if z <= 14 {
-                                if chunk.index[x][y][z+1] == 0 {
-                                    for i in 0..6 {
-                                        indices.push(right[i]);
-                                    }
-                                }
-                            } else {
-                                for i in 0..6 {
-                                    indices.push(right[i]);
-                                }
-                            }
-                            
-                            //front plane
-                            let front = create_indices("front", positions.len() as u32);
-                            if x >= 1 {
-                               if chunk.index[x-1][y][z] == 0 {
-                                for i in 0..6 {
-                                    indices.push(front[i]);
-                                }
-                                } 
-                            } else {
-                                for i in 0..6 {
-                                    indices.push(front[i]);
-                                }
-                            }
-                            
-                            //back plane
-                            let back = create_indices("back", positions.len() as u32);
-                            if x <= 14 {
-                                if chunk.index[x+1][y][z] == 0 {
-                                    for i in 0..6 {
-                                        indices.push(back[i]);
-                                    }
-                                }
-                            } else {
-                                for i in 0..6 {
-                                    indices.push(back[i]);
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-
-            mesh.set_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-            mesh.set_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-            mesh.set_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-
-            mesh.set_indices(Some(Indices::U32(indices)));
-
-
-            commands
-                .spawn(PbrBundle {
-                    mesh: meshes.add(mesh),
-                    material: materials.blocks.clone(),
-                    transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
-                        Vec3::splat(1.0),
-                        Quat::from_rotation_x(0.0),
-                        Vec3::new((chunk.x * 16) as f32, 0.0, (chunk.z * 16) as f32),
-                    )),
-                    ..Default::default()
-                });
-
-            chunk.should_load = false;
-            chunk.loaded = true;
-        }       
-    }
-}
-
-fn create_indices(
-    side: &str,
-    position_len: u32,
-) -> [u32; 6] {
-    let mut indices: [u32; 6] = [0, 0, 0, 0, 0, 0];
-
-    if side == "below" {
-        indices[0] = (position_len - 8 + 0) as u32;
-        indices[1] = (position_len - 8 + 1) as u32;
-        indices[2] = (position_len - 8 + 3) as u32;
-
-        indices[3] = (position_len - 8 + 2) as u32;
-        indices[4] = (position_len - 8 + 3) as u32;
-        indices[5] = (position_len - 8 + 1) as u32;
-    }
-
-    if side == "above" {
-        indices[0] = (position_len - 8 + 5) as u32;
-        indices[1] = (position_len - 8 + 4) as u32;
-        indices[2] = (position_len - 8 + 6) as u32;
-
-        indices[3] = (position_len - 8 + 4) as u32;
-        indices[4] = (position_len - 8 + 7) as u32;
-        indices[5] = (position_len - 8 + 6) as u32;
-    }
-
-    if side == "left" {
-        indices[0] = (position_len - 8 + 1) as u32;
-        indices[1] = (position_len - 8 + 0) as u32;
-        indices[2] = (position_len - 8 + 5) as u32;
-
-        indices[3] = (position_len - 8 + 0) as u32;
-        indices[4] = (position_len - 8 + 4) as u32;
-        indices[5] = (position_len - 8 + 5) as u32;
-    }
-
-    if side == "right" {
-        indices[0] = (position_len - 8 + 3) as u32;
-        indices[1] = (position_len - 8 + 2) as u32;
-        indices[2] = (position_len - 8 + 6) as u32;
-
-        indices[3] = (position_len - 8 + 7) as u32;
-        indices[4] = (position_len - 8 + 3) as u32;
-        indices[5] = (position_len - 8 + 6) as u32;        
-    }
-
-    if side == "front" {
-        indices[0] = (position_len - 8 + 0) as u32;
-        indices[1] = (position_len - 8 + 3) as u32;
-        indices[2] = (position_len - 8 + 4) as u32;
-
-        indices[3] = (position_len - 8 + 4) as u32;
-        indices[4] = (position_len - 8 + 3) as u32;
-        indices[5] = (position_len - 8 + 7) as u32;        
-    }
-
-    if side == "back" {
-        indices[0] = (position_len - 8 + 2) as u32;
-        indices[1] = (position_len - 8 + 1) as u32;
-        indices[2] = (position_len - 8 + 5) as u32;
-
-        indices[3] = (position_len - 8 + 2) as u32;
-        indices[4] = (position_len - 8 + 5) as u32;
-        indices[5] = (position_len - 8 + 6) as u32;
-    }
-    indices
-}
-*/
