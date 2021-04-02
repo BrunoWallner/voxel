@@ -14,20 +14,17 @@ pub struct Light;
 #[bevy_main]
 fn main() {
     App::build()
-        .add_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
-
         .add_plugins(DefaultPlugins)
 
         .add_startup_system(setup.system())
         .add_startup_system(chunk::spawn_world.system())
 
-        .add_startup_stage("spawn", SystemStage::serial())
-        .add_startup_system_to_stage("spawn", chunk::generate_spawn.system())
+        .add_startup_stage("spawn", SystemStage::single(chunk::generate_spawn.system()))
 
-        .add_startup_stage("render", SystemStage::serial())
-        .add_startup_system_to_stage("render", chunk::render_chunk.system())
+        .add_startup_stage("render", SystemStage::single(chunk::render_chunk.system()))
 
-        .add_system(input::destroy.system())
+        .add_system(input::place.system())
+        .add_system(input::movement.system())
 
         .run();
 }
@@ -40,7 +37,9 @@ fn setup(
 ) {
     commands
         // Clear Color
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.5)))
+        .insert_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()})
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)))
+        .insert_resource(Msaa { samples: 1 })
         
         // Light
         .spawn(LightBundle {
@@ -61,13 +60,21 @@ fn setup(
         })
         .with(Light);
 
-        // Camera
+        /* Camera
         let mut camera = OrthographicCameraBundle::new_3d();
-        camera.orthographic_projection.scale = 3.0;
-        camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::zero(), Vec3::unit_y());
+        camera.orthographic_projection.scale = 75.0;
+        camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::unit_y());
+        camera.transform.translation = Vec3::new(100.0, 100.0, 100.0);
         
-        commands.spawn(camera);
-        
+        commands.spawn(camera).with(Camera);
+        */
+        commands
+            .spawn(PerspectiveCameraBundle {
+                transform: Transform::from_xyz(75.0, 100.0, 75.0)
+                    .looking_at(Vec3::zero(), Vec3::unit_y()),
+                ..Default::default()
+            })
+            .with(Camera);
 
         let block_texture_handle = asset_server.load("textures/blocks.png");
 

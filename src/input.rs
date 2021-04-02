@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use crate::Camera;
 
-pub fn destroy(
+pub fn place(
     mut world: Query<&mut crate::chunk::World, With<crate::chunk::World>>,
     camera: Query<&Transform, With<Camera>>,
     mut chunk_mesh: Query<(Entity, &mut crate::chunk::ChunkMesh), With<crate::chunk::ChunkMesh>>,
@@ -93,6 +93,32 @@ pub fn destroy(
                         .with(crate::chunk::ChunkMesh::new(camera_chunk_position[0], camera_chunk_position[1], camera_chunk_position[2]));
                 }
             }
+        }
+    }
+}
+
+pub fn movement(
+    mut camera: Query<&mut Transform, With<Camera>>,
+    input: Res<Input<KeyCode>>,
+    time: Res<Time>,
+) {
+    for mut camera in camera.iter_mut() {
+        let speed: f32 = 50.0 * time.delta_seconds(); 
+        if input.pressed(KeyCode::W) {
+            camera.translation.z-=speed;
+            camera.translation.x-=speed;
+        }
+        if input.pressed(KeyCode::A) {
+            camera.translation.z+=speed / 2.0;
+            camera.translation.x-=speed / 2.0;
+        }
+        if input.pressed(KeyCode::S) {
+            camera.translation.z+=speed;
+            camera.translation.x+=speed;
+        }
+        if input.pressed(KeyCode::D) {
+            camera.translation.z-=speed / 2.0;
+            camera.translation.x+=speed / 2.0;
         }
     }
 }
