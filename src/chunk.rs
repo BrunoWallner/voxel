@@ -18,6 +18,17 @@ impl Chunk {
     }
 }
 
+pub struct ChunkMesh {
+    pub x: i32,
+    pub y: i32,
+    pub z: i32,
+}
+impl ChunkMesh {
+    pub fn new(x: i32, y: i32, z: i32) -> Self {
+        ChunkMesh {x: x, y: y, z: z}
+    }
+}
+
 pub struct World {
     pub chunk_index: Vec<Chunk>,
     pub seed: u32,
@@ -29,6 +40,25 @@ impl World {
         World {seed: seed, chunk_index: chunk_index}
     }
 }
+
+pub fn get_chunk_index(
+    position: [i32; 3],
+    world: &World,
+) -> usize {
+    let mut index: usize = 0;
+
+    for i in 0..world.chunk_index.len() - 1 {
+        if world.chunk_index[i].x == position[0]
+        && world.chunk_index[i].y == position[1]
+        && world.chunk_index[i].z == position[2]
+        {
+            index = i;
+        }
+    }
+    
+    index
+}
+
 
 pub fn spawn_world(
     commands: &mut Commands,
@@ -159,12 +189,13 @@ pub fn render_chunk(
                         Vec3::new((world.chunk_index[chunk].x * 32) as f32, (world.chunk_index[chunk].y * 32) as f32, (world.chunk_index[chunk].z * 32) as f32),
                     )),
                     ..Default::default()
-                });
+                })
+                .with(ChunkMesh::new(world.chunk_index[chunk].x, world.chunk_index[chunk].y, world.chunk_index[chunk].z));
         }       
     }
 }
 
-fn create_chunk_mesh(
+pub fn create_chunk_mesh(
     chunk: usize,
     world: &World,
 ) -> Mesh {

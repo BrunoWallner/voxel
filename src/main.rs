@@ -1,16 +1,12 @@
 use bevy::prelude::*;
 
-
-use bevy_flycam::NoCameraPlayerPlugin;
-use bevy_flycam::FlyCam;
-use bevy_flycam::MovementSettings;
-
 pub struct Materials {
     pub blocks: Handle<StandardMaterial>,
 }
 
 
 mod chunk;
+mod input;
 
 pub struct Camera;
 pub struct Light;
@@ -22,12 +18,6 @@ fn main() {
 
         .add_plugins(DefaultPlugins)
 
-        .add_plugin(NoCameraPlayerPlugin)
-        .add_resource(MovementSettings {
-            sensitivity: 0.000020, // default: 0.00012
-            speed: 25.0, // default: 12.0
-        })
-
         .add_startup_system(setup.system())
         .add_startup_system(chunk::spawn_world.system())
 
@@ -36,6 +26,8 @@ fn main() {
 
         .add_startup_stage("render", SystemStage::serial())
         .add_startup_system_to_stage("render", chunk::render_chunk.system())
+
+        .add_system(input::destroy.system())
 
         .run();
 }
@@ -48,7 +40,7 @@ fn setup(
 ) {
     commands
         // Clear Color
-        .insert_resource(ClearColor(Color::rgb(0.0, 0.2, 0.1)))
+        .insert_resource(ClearColor(Color::rgb(0.0, 0.3, 0.5)))
         
         // Light
         .spawn(LightBundle {
@@ -67,18 +59,14 @@ fn setup(
             )),
             ..Default::default()
         })
-        .with(Light)
+        .with(Light);
 
         // Camera
-        .spawn(Camera3dBundle {
-            transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(0.0, 0.0, 0.0, 0.5).normalize(),
-                Vec3::new(-200.0, 25.0, 0.0),
-            )),
-            ..Default::default()
-        })
-        .with(Camera)
-        .with(FlyCam);
+        let mut camera = OrthographicCameraBundle::new_3d();
+        camera.orthographic_projection.scale = 3.0;
+        camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::zero(), Vec3::unit_y());
+        
+        commands.spawn(camera);
         
 
         let block_texture_handle = asset_server.load("textures/blocks.png");
