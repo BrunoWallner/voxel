@@ -59,6 +59,7 @@ pub fn get_chunk_index(
     index
 }
 
+use crate::input;
 
 pub fn spawn_world(
     commands: &mut Commands,
@@ -70,16 +71,17 @@ pub fn spawn_world(
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
             ..Default::default()
         })
-        .with(World::new(1457087));
+        .with(World::new(1457087))
+        .with(input::Builder::new(0, 60, 0));
 }
 
 pub fn generate_spawn(
     mut world: Query<&mut World, With<World>>
 ) {
-    let radius = 3;
+    let radius = 2;
     for mut world in world.iter_mut() {
         for x in -radius..radius {
-            for y in -radius..radius {
+            for y in -3..5 {
                 for z in -radius..radius {
                     world.chunk_index.push(Chunk::new(x, y, z));
 
@@ -231,7 +233,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y, z ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
 
                     positions.push([ x, y + 1.0, z ]);
                     normals.push([ world_x, world_y, world_z ]);
@@ -239,7 +241,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y + 1.0, z ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
 
 
                     // rear side
@@ -249,7 +251,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
 
                     positions.push([ x + 1.0, y + 1.0, z ]);
                     normals.push([ world_x, world_y, world_z ]);
@@ -257,7 +259,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
 
 
                     // right side
@@ -267,7 +269,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
 
                     positions.push([ x, y + 1.0, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
@@ -275,7 +277,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
 
 
                     // front side
@@ -285,7 +287,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x, y, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
 
                     positions.push([ x, y + 1.0, z ]);
                     normals.push([ world_x, world_y, world_z ]);
@@ -293,7 +295,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x, y + 1.0, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
 
 
                     // bottom side
@@ -303,7 +305,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x, y, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
 
                     positions.push([ x + 1.0, y, z ]);
                     normals.push([ world_x, world_y, world_z ]);
@@ -311,7 +313,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
 
 
                     // upper side
@@ -321,7 +323,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x, y + 1.0, z + 1.0 ]);
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 0.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
 
                     positions.push([ x + 1.0, y + 1.0, z ]);
                     normals.push([ world_x, world_y, world_z ]);
@@ -329,7 +331,7 @@ pub fn create_chunk_mesh(
 
                     positions.push([ x + 1.0, y + 1.0, z + 1.0] );
                     normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block + 1) as f32 / 256.0, 1.0 ]);
+                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
 
 
 

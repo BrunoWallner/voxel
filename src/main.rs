@@ -23,8 +23,9 @@ fn main() {
 
         .add_startup_stage("render", SystemStage::single(chunk::render_chunk.system()))
 
-        .add_system(input::place.system())
+        .add_system(input::build.system())
         .add_system(input::movement.system())
+        .add_system(input::builder_movement.system())
 
         .run();
 }
@@ -49,28 +50,21 @@ fn setup(
             )),
             ..Default::default()
         })
-        .with(Light)
-
-        .spawn(LightBundle {
-            transform: Transform::from_matrix(Mat4::from_rotation_translation(
-                Quat::from_xyzw(0.0, 0.0, 0.0, 0.0).normalize(),
-                Vec3::new(0.0, -1000000000.0, 0.0),
-            )),
-            ..Default::default()
-        })
         .with(Light);
+
 
         /* Camera
         let mut camera = OrthographicCameraBundle::new_3d();
-        camera.orthographic_projection.scale = 75.0;
+        camera.orthographic_projection.scale = 50.0;
         camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::unit_y());
         camera.transform.translation = Vec3::new(100.0, 100.0, 100.0);
         
         commands.spawn(camera).with(Camera);
         */
+
         commands
             .spawn(PerspectiveCameraBundle {
-                transform: Transform::from_xyz(75.0, 100.0, 75.0)
+                transform: Transform::from_xyz(-75.0, 100.0, -75.0)
                     .looking_at(Vec3::zero(), Vec3::unit_y()),
                 ..Default::default()
             })
