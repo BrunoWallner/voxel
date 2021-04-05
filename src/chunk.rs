@@ -59,7 +59,7 @@ pub fn get_chunk_index(
     index
 }
 
-use crate::input;
+use crate::controll;
 
 pub fn spawn_world(
     commands: &mut Commands,
@@ -72,7 +72,7 @@ pub fn spawn_world(
             ..Default::default()
         })
         .with(World::new(1457087))
-        .with(input::Builder::new(0, 60, 0));
+        .with(controll::Builder::new(0.0, 60.0, 0.0));
 }
 
 pub fn generate_spawn(
@@ -197,6 +197,7 @@ pub fn render_chunk(
     }
 }
 
+
 pub fn create_chunk_mesh(
     chunk: usize,
     world: &World,
@@ -226,191 +227,192 @@ pub fn create_chunk_mesh(
                 
                 if block != 0 { 
 
-                    // left side
-                    positions.push([ x, y, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 0.0 ]);
-
-                    positions.push([ x + 1.0, y, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
-
-                    positions.push([ x, y + 1.0, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 1.0 ]);
-
-                    positions.push([ x + 1.0, y + 1.0, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-
-
-                    // rear side
-                    positions.push([ x + 1.0, y, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 0.0 ]);
-
-                    positions.push([ x + 1.0, y, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
-
-                    positions.push([ x + 1.0, y + 1.0, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 1.0 ]);
-
-                    positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-
-
-                    // right side
-                    positions.push([ x, y, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 0.0 ]);
-
-                    positions.push([ x + 1.0, y, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
-
-                    positions.push([ x, y + 1.0, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 1.0 ]);
-
-                    positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-
-
-                    // front side
-                    positions.push([ x, y, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 0.0 ]);
-
-                    positions.push([ x, y, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
-
-                    positions.push([ x, y + 1.0, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 1.0 ]);
-
-                    positions.push([ x, y + 1.0, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-
-
-                    // bottom side
-                    positions.push([ x, y, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 0.0 ]);
-
-                    positions.push([ x, y, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
-
-                    positions.push([ x + 1.0, y, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 1.0 ]);
-
-                    positions.push([ x + 1.0, y, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-
-
-                    // upper side
-                    positions.push([ x, y + 1.0, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 0.0 ]);
-
-                    positions.push([ x, y + 1.0, z + 1.0 ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
-
-                    positions.push([ x + 1.0, y + 1.0, z ]);
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ block as f32 / 256.0, 1.0 ]);
-
-                    positions.push([ x + 1.0, y + 1.0, z + 1.0] );
-                    normals.push([ world_x, world_y, world_z ]);
-                    uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-
-
-
-                    //creates indices
-                
                     //below plane
-                    let below = create_indices("below", positions.len() as u32);
-                    if y as usize >= 1 {
-                        if world.chunk_index[chunk].index[x1][y1-1][z1] == 0 {
-                            for i in 0..6 { indices.push(below[i]) }
-                        }
-                    } else {
-                        for i in 0..6 { indices.push(below[i]) }
+                    if y as usize >= 0 {
+                        
+                        // creates vertices
+                        positions.push([ x, y, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                        positions.push([ x, y, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                        positions.push([ x + 1.0, y, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                        positions.push([ x + 1.0, y, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                        // creates indices
+                        let positions_len = positions.len() - 4;
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 2) as u32 );
+                        indices.push( (positions_len + 1) as u32 );
+
+                        indices.push( (positions_len + 3) as u32 );
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 2) as u32 );
+
                     }
 
                     //above plane
-                    let above = create_indices("above", positions.len() as u32);
-                    if y as usize <= 30 {
-                        if world.chunk_index[chunk].index[x1][y1+1][z1] == 0 {
-                            for i in 0..6 { indices.push(above[i]) }
-                        }
-                    } else {
-                        for i in 0..6 { indices.push(above[i]) }
+                    if y as usize <= 32 {
+                        
+                        // creates vertices
+                        positions.push([ x, y + 1.0, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                        positions.push([ x, y + 1.0, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                        positions.push([ x + 1.0, y + 1.0, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                        positions.push([ x + 1.0, y + 1.0, z + 1.0] );
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                        // creates indices
+                        let positions_len = positions.len() - 4;
+                        indices.push( (positions_len + 2) as u32 );
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
+
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
                     }
 
                     //left plane
-                    let left = create_indices("left", positions.len() as u32);
-                    if z as usize >= 1 {
-                        if world.chunk_index[chunk].index[x1][y1][z1-1] == 0 {
-                            for i in 0..6 {
-                                indices.push(left[i]);
-                            }
-                        }
-                    } else {
-                        for i in 0..6 {
-                            indices.push(left[i]);
-                        }
-                    }
+                    if z as usize >= 0 {
+                        
+                        // creates vertices
+                        positions.push([ x, y, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                        positions.push([ x + 1.0, y, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                        positions.push([ x, y + 1.0, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                        positions.push([ x + 1.0, y + 1.0, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                        // creates indices
+                        let positions_len = positions.len() - 4;
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
+
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 2) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
+                    } 
 
                     //right plane
-                    let right = create_indices("right", positions.len() as u32);
-                    if z as usize <= 30 {
-                        if world.chunk_index[chunk].index[x1][y1][z1+1] == 0 {
-                            for i in 0..6 {
-                                indices.push(right[i]);
-                            }
-                        }
-                    } else {
-                        for i in 0..6 {
-                            indices.push(right[i]);
-                        }
+                    if z as usize <= 32 {
+                        
+                        // creates vertices
+                        positions.push([ x, y, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                        positions.push([ x + 1.0, y, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                        positions.push([ x, y + 1.0, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                        positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                        // creates indices
+                        let positions_len = positions.len() - 4;
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
+
+                        indices.push( (positions_len + 2) as u32 );
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
                     }
+
                     
                     //front plane
-                    let front = create_indices("front", positions.len() as u32);
-                    if x as usize >= 1 {
-                       if world.chunk_index[chunk].index[x1-1][y1][z1] == 0 {
-                        for i in 0..6 {
-                            indices.push(front[i]);
-                        }
-                        } 
-                    } else {
-                        for i in 0..6 {
-                            indices.push(front[i]);
-                        }
-                    }
+                    if x as usize >= 0 {
+                        
+                        // creates vertices
+                        positions.push([ x, y, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                        positions.push([ x, y, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                        positions.push([ x, y + 1.0, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                        positions.push([ x, y + 1.0, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                        // creates indices
+                        let positions_len = positions.len() - 4;
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 2) as u32 );
+
+                        indices.push( (positions_len + 2) as u32 );
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 3) as u32 ); 
+                    } 
                     
                     //back plane
-                    let back = create_indices("back", positions.len() as u32);
-                    if x as usize <= 30 {
-                        if world.chunk_index[chunk].index[x1+1][y1][z1] == 0 {
-                            for i in 0..6 {
-                                indices.push(back[i]);
-                            }
-                        }
-                    } else {
-                        for i in 0..6 {
-                            indices.push(back[i]);
-                        }
+                    if x as usize <= 32 {
+                        
+                        // creates vertices
+                        positions.push([ x + 1.0, y, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                        positions.push([ x + 1.0, y, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                        positions.push([ x + 1.0, y + 1.0, z ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                        positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
+                        normals.push([ world_x, world_y, world_z ]);
+                        uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+                        
+                        // creates indices
+                        let positions_len = positions.len() - 4;
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 0) as u32 );
+                        indices.push( (positions_len + 2) as u32 );
+
+                        indices.push( (positions_len + 1) as u32 );
+                        indices.push( (positions_len + 2) as u32 );
+                        indices.push( (positions_len + 3) as u32 );
                     }
                 }
             }
@@ -426,71 +428,39 @@ pub fn create_chunk_mesh(
     mesh
 }
 
-
-fn create_indices(
-    side: &str,
-    position_len: u32,
-) -> [u32; 6] {
-    let mut indices: [u32; 6] = [0, 0, 0, 0, 0, 0];
-
-    if side == "below" {
-        indices[0] = (position_len - 8 + 0) as u32;
-        indices[1] = (position_len - 8 + 2) as u32;
-        indices[2] = (position_len - 8 + 1) as u32;
-
-        indices[3] = (position_len - 8 + 3) as u32;
-        indices[4] = (position_len - 8 + 1) as u32;
-        indices[5] = (position_len - 8 + 2) as u32;
+pub fn get_chunk_coordinates_from_position(
+    pos: [i32; 3],
+) -> [i32; 3] {
+    let mut final_pos: [i32; 3] = [0, 0, 0];
+    
+    if pos[0] < 0 {
+        final_pos[0] = ( pos[0] + 1 ) / 32;
+    }
+    else {
+        final_pos[0] = pos[0] / 32;
+    }
+    if pos[1] < 0 {
+        final_pos[1] = ( pos[1] + 1 ) / 32;
+    }
+    else {
+        final_pos[1] = pos[1] / 32;
+    }
+    if pos[2] < 0 {
+        final_pos[2] = ( pos[2] + 1 ) / 32;
+    }
+    else {
+        final_pos[2] = pos[2] / 32;
     }
 
-    if side == "above" {
-        indices[0] = (position_len - 4 + 2) as u32;
-        indices[1] = (position_len - 4 + 0) as u32;
-        indices[2] = (position_len - 4 + 3) as u32;
-
-        indices[3] = (position_len - 4 + 0) as u32;
-        indices[4] = (position_len - 4 + 1) as u32;
-        indices[5] = (position_len - 4 + 3) as u32;
+    if pos[0] < 0 {
+        final_pos[0]-=1;
+    }
+    if pos[1] < 0 {
+        final_pos[1]-=1;
+    }
+    if pos[2] < 0 {
+        final_pos[2]-=1;
     }
 
-    if side == "left" {
-        indices[0] = (position_len - 24 + 1) as u32;
-        indices[1] = (position_len - 24 + 0) as u32;
-        indices[2] = (position_len - 24 + 3) as u32;
-
-        indices[3] = (position_len - 24 + 0) as u32;
-        indices[4] = (position_len - 24 + 2) as u32;
-        indices[5] = (position_len - 24 + 3) as u32;
-    }
-
-    if side == "right" {
-        indices[0] = (position_len - 16 + 0) as u32;
-        indices[1] = (position_len - 16 + 1) as u32;
-        indices[2] = (position_len - 16 + 3) as u32;
-
-        indices[3] = (position_len - 16 + 2) as u32;
-        indices[4] = (position_len - 16 + 0) as u32;
-        indices[5] = (position_len - 16 + 3) as u32;        
-    }
-
-    if side == "front" {
-        indices[0] = (position_len - 12 + 0) as u32;
-        indices[1] = (position_len - 12 + 1) as u32;
-        indices[2] = (position_len - 12 + 2) as u32;
-
-        indices[3] = (position_len - 12 + 2) as u32;
-        indices[4] = (position_len - 12 + 1) as u32;
-        indices[5] = (position_len - 12 + 3) as u32;        
-    }
-
-    if side == "back" {
-        indices[0] = (position_len - 20 + 1) as u32;
-        indices[1] = (position_len - 20 + 0) as u32;
-        indices[2] = (position_len - 20 + 2) as u32;
-
-        indices[3] = (position_len - 20 + 1) as u32;
-        indices[4] = (position_len - 20 + 2) as u32;
-        indices[5] = (position_len - 20 + 3) as u32;
-    }
-    indices
+    final_pos
 }

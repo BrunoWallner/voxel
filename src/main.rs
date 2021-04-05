@@ -6,7 +6,8 @@ pub struct Materials {
 
 
 mod chunk;
-mod input;
+mod controll;
+mod player_input;
 
 pub struct Camera;
 pub struct Light;
@@ -23,9 +24,9 @@ fn main() {
 
         .add_startup_stage("render", SystemStage::single(chunk::render_chunk.system()))
 
-        .add_system(input::build.system())
-        .add_system(input::movement.system())
-        .add_system(input::builder_movement.system())
+        .add_system(controll::build.system())
+        .add_system(controll::movement.system())
+        .add_system(controll::builder_movement.system())
 
         .run();
 }
@@ -35,6 +36,7 @@ fn setup(
     commands: &mut Commands,
     mut materials: ResMut<Assets<StandardMaterial>>,
     asset_server: Res<AssetServer>,
+    mut meshes: ResMut<Assets<Mesh>>,
 ) {
     commands
         // Clear Color
@@ -52,19 +54,10 @@ fn setup(
         })
         .with(Light);
 
-
-        /* Camera
-        let mut camera = OrthographicCameraBundle::new_3d();
-        camera.orthographic_projection.scale = 50.0;
-        camera.transform = Transform::from_xyz(5.0, 5.0, 5.0).looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::unit_y());
-        camera.transform.translation = Vec3::new(100.0, 100.0, 100.0);
-        
-        commands.spawn(camera).with(Camera);
-        */
-
+        // spawns player
         commands
             .spawn(PerspectiveCameraBundle {
-                transform: Transform::from_xyz(-75.0, 100.0, -75.0)
+                transform: Transform::from_xyz(-75.0, 75.0, -75.0)
                     .looking_at(Vec3::zero(), Vec3::unit_y()),
                 ..Default::default()
             })
@@ -77,4 +70,21 @@ fn setup(
         commands.insert_resource(Materials {
             blocks: blocks,
         });
+
+        // spawn builderindicator
+        let builder_texture_handle = asset_server.load("textures/builder.png");
+        let builder_texture = materials.add(StandardMaterial { albedo: Color::rgba(1.0, 1.0, 1.0, 1.0), albedo_texture: Some(builder_texture_handle.clone()), ..Default::default() });
+
+        commands
+            .spawn(PbrBundle {
+                mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
+                material: builder_texture.clone(),
+                transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
+                    Vec3::splat(0.75),
+                    Quat::from_rotation_x(0.0),
+                    Vec3::new(0.0, 0.0, 0.0),
+                )),
+                    ..Default::default()
+            })
+            .with(controll::BuilderIndicator);
 }

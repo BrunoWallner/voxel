@@ -2,29 +2,32 @@ use bevy::prelude::*;
 use crate::Camera;
 
 pub struct Builder {
-    x: i32,
-    y: i32,
-    z: i32,
+    x: f32,
+    y: f32,
+    z: f32,
 }
 impl Builder {
-    pub fn new(x: i32, y: i32, z: i32) -> Self {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
         Builder {x: x, y: y, z: z}
     }
 
-    pub fn chpos(&mut self, direction: [i32; 3]) {
+    pub fn chpos(&mut self, direction: [f32; 3]) {
         self.x += direction[0];
         self.y += direction[1];
         self.z += direction[2];
     }
 
-    pub fn get_position(&self) -> [i32; 3] {
+    pub fn get_position(&self) -> [f32; 3] {
         [self.x, self.y ,self.z]
     }
 }
 
+pub struct BuilderIndicator;
+
 pub fn build(
     mut world: Query<&mut crate::chunk::World, With<crate::chunk::World>>,
     builder: Query<&Builder, With<Builder>>,
+    mut builder_indicator: Query<&mut Transform, With<BuilderIndicator>>,
     mut chunk_mesh: Query<(Entity, &mut crate::chunk::ChunkMesh), With<crate::chunk::ChunkMesh>>,
     input: Res<Input<KeyCode>>,
     commands: &mut Commands,
@@ -34,22 +37,11 @@ pub fn build(
     let mut builder_position: [i32; 3] = [0, 0, 0];
 
     for builder in builder.iter() {
-        builder_position = builder.get_position();
+        let old_pos = builder.get_position();
+        builder_position = [old_pos[0] as i32, old_pos[1] as i32, old_pos[2] as i32];
     }
 
-    let mut builder_chunk_position: [i32; 3] = 
-    
-    [builder_position[0] / 32, builder_position[1] / 32, builder_position[2] / 32];
-    // important
-    if builder_position[0] < 0 {
-        builder_chunk_position[0]-=1;
-    }
-    if builder_position[1] < 0 {
-        builder_chunk_position[1]-=1;
-    }
-    if builder_position[2] < 0 {
-        builder_chunk_position[2]-=1;
-    }
+    let builder_chunk_position: [i32; 3] = crate::chunk::get_chunk_coordinates_from_position(builder_position);
 
     let mut chunk_position: usize = 0;
     for mut world in world.iter_mut() {
@@ -60,34 +52,44 @@ pub fn build(
     let mut blocks: [usize; 3] = [0, 0, 0];
 
     for i in 0..3 {
-        if builder_chunk_position[i] > 0 {
-            blocks[i] = ( builder_position[i] - builder_chunk_position[i] *32 ) as usize
-        }
-        if builder_chunk_position[i] < 0 {
-            blocks[i] = ( builder_position[i] - builder_chunk_position[i] *32 ) as usize
-        }
-        if builder_chunk_position[i] == 0 {
-            blocks[i] = builder_position[i] as usize;
-        }
+        blocks[i] = ( (builder_position[i]) - builder_chunk_position[i] *32 ) as usize
     }
 
+    // update position of builder_indicator
+    for mut builder_indicator in builder_indicator.iter_mut() {
+        builder_indicator.translation.x = builder_position[0] as f32 + 0.5;
+        builder_indicator.translation.y = builder_position[1] as f32 + 0.5;
+        builder_indicator.translation.z = builder_position[2] as f32 + 0.5;
+    }
+
+    let mut edited: bool = false;
+
+    // places block
     if input.pressed(KeyCode::E) {
         for mut world in world.iter_mut() {
 
             // places block in chunk index
             world
                 .chunk_index[chunk_position]
-                .index[blocks[0]][blocks[1]][blocks[2]] = 2;
-
-            // shows debug infos
-            print!("\x1B[2J\x1B[1;1H");
-            println!("-------------DEBUG-------------");
-            println!("destroyed block at: {} {} {}", blocks[0], blocks[1], blocks[2]);
-            println!("in chunk:           {} {} {}", builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]);
-            println!("builder psition:    {} {} {}", builder_position[0], builder_position[1], builder_position[2]);
+                .index[blocks[0]][blocks[1]][blocks[2]] = 3;
         }
+        edited = true;
+    }
 
-        // replaces ChunkMesh
+    // destroys block
+    if input.pressed(KeyCode::Q) {
+        for mut world in world.iter_mut() {
+
+            // places block in chunk index
+            world
+                .chunk_index[chunk_position]
+                .index[blocks[0]][blocks[1]][blocks[2]] = 0;
+        }
+        edited = true;
+    }
+
+    // replaces ChunkMesh
+    if edited {
         for (entity, chunk_mesh) in chunk_mesh.iter_mut() {
             if chunk_mesh.x == builder_chunk_position[0]
             && chunk_mesh.y == builder_chunk_position[1]
@@ -116,29 +118,71 @@ pub fn build(
                         .with(crate::chunk::ChunkMesh::new(builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]));
                 }
             }
+        } 
+    }
+    
+}
+
+/*
+pub fn builder_movement(
+    input: Res<Input<KeyCode>>,
+    mut builder: Query<&mut Builder, With<Builder>>,
+    time: Res<Time>,
+) {
+    for mut builder in builder.iter_mut() {
+
+        let speed: f32 = 10.0 * time.delta_seconds();
+
+        if input.pressed(KeyCode::Left) {
+            builder.chpos( [0.0, 0.0, -speed] );
+        }
+        if input.pressed(KeyCode::Up) {
+            builder.chpos( [speed, 0.0, 0.0] );
+        }
+        if input.pressed(KeyCode::Right) {
+            builder.chpos( [0.0, 0.0, speed] );
+        }
+        if input.pressed(KeyCode::Down) {
+            builder.chpos( [-speed, 0.0, 0.0] );
+        }
+
+        if input.pressed(KeyCode::Numpad0) {
+            builder.chpos( [0.0, -speed, 0.0] );
+        }
+        if input.pressed(KeyCode::RControl) {
+            builder.chpos( [0.0, speed, 0.0] );
         }
     }
 }
+*/
 
 pub fn builder_movement(
     input: Res<Input<KeyCode>>,
     mut builder: Query<&mut Builder, With<Builder>>,
+    time: Res<Time>,
 ) {
     for mut builder in builder.iter_mut() {
 
-        let speed: i32 = 1;
+        let speed: f32 = 10.0 * time.delta_seconds();
 
-        if input.just_pressed(KeyCode::Left) {
-            builder.chpos( [0, 0, -speed] );
+        if input.pressed(KeyCode::Left) {
+            builder.chpos( [0.0, 0.0, -speed] );
         }
-        if input.just_pressed(KeyCode::Up) {
-            builder.chpos( [speed, 0, 0] );
+        if input.pressed(KeyCode::Up) {
+            builder.chpos( [speed, 0.0, 0.0] );
         }
-        if input.just_pressed(KeyCode::Right) {
-            builder.chpos( [0, 0, speed] );
+        if input.pressed(KeyCode::Right) {
+            builder.chpos( [0.0, 0.0, speed] );
         }
-        if input.just_pressed(KeyCode::Down) {
-            builder.chpos( [-speed, 0, 0] );
+        if input.pressed(KeyCode::Down) {
+            builder.chpos( [-speed, 0.0, 0.0] );
+        }
+
+        if input.pressed(KeyCode::Numpad0) {
+            builder.chpos( [0.0, -speed, 0.0] );
+        }
+        if input.pressed(KeyCode::RControl) {
+            builder.chpos( [0.0, speed, 0.0] );
         }
     }
 }
