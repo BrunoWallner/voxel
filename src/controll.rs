@@ -30,7 +30,7 @@ pub fn build(
     mut builder_indicator: Query<&mut Transform, With<BuilderIndicator>>,
     mut chunk_mesh: Query<(Entity, &mut crate::chunk::ChunkMesh), With<crate::chunk::ChunkMesh>>,
     input: Res<Input<KeyCode>>,
-    commands: &mut Commands,
+    mut commands: Commands,
     materials: Res<crate::Materials>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
@@ -44,9 +44,30 @@ pub fn build(
     let builder_chunk_position: [i32; 3] = crate::chunk::get_chunk_coordinates_from_position(builder_position);
 
     let mut chunk_position: usize = 0;
+
+    let mut x_chunk_position: [usize; 2] = [0, 0];
+    let mut y_chunk_position: [usize; 2] = [0, 0];
+    let mut z_chunk_position: [usize; 2] = [0, 0];
+
     for mut world in world.iter_mut() {
         chunk_position = 
             crate::chunk::get_chunk_index( builder_chunk_position, &mut world ); 
+
+        // neighbour chunk positions
+        x_chunk_position[0] = 
+            crate::chunk::get_chunk_index( [builder_chunk_position[0]-1, builder_chunk_position[1], builder_chunk_position[2]], &mut world );
+        x_chunk_position[1] = 
+            crate::chunk::get_chunk_index( [builder_chunk_position[0]+1, builder_chunk_position[1], builder_chunk_position[2]], &mut world );
+
+        y_chunk_position[0] = 
+            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1]-1, builder_chunk_position[2]], &mut world );
+        y_chunk_position[1] = 
+            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1]+1, builder_chunk_position[2]], &mut world );
+
+        z_chunk_position[0] = 
+            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]-1], &mut world );
+        z_chunk_position[1] = 
+            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]+1], &mut world );
     }
 
     let mut blocks: [usize; 3] = [0, 0, 0];
@@ -80,10 +101,11 @@ pub fn build(
     if input.pressed(KeyCode::Q) {
         for mut world in world.iter_mut() {
 
-            // places block in chunk index
+            // places block in chunk index         
             world
                 .chunk_index[chunk_position]
                 .index[blocks[0]][blocks[1]][blocks[2]] = 0;
+            
         }
         edited = true;
     }
@@ -95,7 +117,7 @@ pub fn build(
             && chunk_mesh.y == builder_chunk_position[1]
             && chunk_mesh.z == builder_chunk_position[2]
             {
-                commands.despawn(entity);
+                commands.entity(entity).despawn();
 
                 for mut world in world.iter_mut() {
                     let mesh = 
@@ -105,7 +127,7 @@ pub fn build(
                         );
 
                     commands
-                        .spawn(PbrBundle {
+                        .spawn_bundle(PbrBundle {
                             mesh: meshes.add(mesh),
                             material: materials.blocks.clone(),
                             transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
@@ -115,7 +137,7 @@ pub fn build(
                             )),
                             ..Default::default()
                         })
-                        .with(crate::chunk::ChunkMesh::new(builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]));
+                        .insert(crate::chunk::ChunkMesh::new(builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]));
                 }
             }
         } 
@@ -123,38 +145,6 @@ pub fn build(
     
 }
 
-/*
-pub fn builder_movement(
-    input: Res<Input<KeyCode>>,
-    mut builder: Query<&mut Builder, With<Builder>>,
-    time: Res<Time>,
-) {
-    for mut builder in builder.iter_mut() {
-
-        let speed: f32 = 10.0 * time.delta_seconds();
-
-        if input.pressed(KeyCode::Left) {
-            builder.chpos( [0.0, 0.0, -speed] );
-        }
-        if input.pressed(KeyCode::Up) {
-            builder.chpos( [speed, 0.0, 0.0] );
-        }
-        if input.pressed(KeyCode::Right) {
-            builder.chpos( [0.0, 0.0, speed] );
-        }
-        if input.pressed(KeyCode::Down) {
-            builder.chpos( [-speed, 0.0, 0.0] );
-        }
-
-        if input.pressed(KeyCode::Numpad0) {
-            builder.chpos( [0.0, -speed, 0.0] );
-        }
-        if input.pressed(KeyCode::RControl) {
-            builder.chpos( [0.0, speed, 0.0] );
-        }
-    }
-}
-*/
 
 pub fn builder_movement(
     input: Res<Input<KeyCode>>,

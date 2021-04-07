@@ -62,17 +62,17 @@ pub fn get_chunk_index(
 use crate::controll;
 
 pub fn spawn_world(
-    commands: &mut Commands,
+    mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,  
 ) {
     commands
-        .spawn(PbrBundle {
+        .spawn_bundle(PbrBundle {
             mesh: meshes.add(Mesh::from(shape::Plane{ size: 1.0 })),
             transform: Transform::from_translation(Vec3::new(0.0, 0.0, 0.0)),
             ..Default::default()
         })
-        .with(World::new(1457087))
-        .with(controll::Builder::new(0.0, 60.0, 0.0));
+        .insert(World::new(1457087))
+        .insert(controll::Builder::new(0.0, 60.0, 0.0));
 }
 
 pub fn generate_spawn(
@@ -168,7 +168,7 @@ use crate::Materials;
 
 
 pub fn render_chunk(
-    commands: &mut Commands,
+    mut commands: Commands,
     materials: Res<Materials>,
     mut meshes: ResMut<Assets<Mesh>>,
     world: Query<&World, With<World>>,
@@ -182,7 +182,7 @@ pub fn render_chunk(
 
 
             commands
-                .spawn(PbrBundle {
+                .spawn_bundle(PbrBundle {
                     mesh: meshes.add(mesh),
                     material: materials.blocks.clone(),
                     transform: Transform::from_matrix(Mat4::from_scale_rotation_translation(
@@ -192,7 +192,7 @@ pub fn render_chunk(
                     )),
                     ..Default::default()
                 })
-                .with(ChunkMesh::new(world.chunk_index[chunk].x, world.chunk_index[chunk].y, world.chunk_index[chunk].z));
+                .insert(ChunkMesh::new(world.chunk_index[chunk].x, world.chunk_index[chunk].y, world.chunk_index[chunk].z));
         }       
     }
 }
@@ -228,8 +228,38 @@ pub fn create_chunk_mesh(
                 if block != 0 { 
 
                     //below plane
-                    if y as usize >= 0 {
+                    if y as usize >= 1 {
+                        if world.chunk_index[chunk].index[x1][y1 - 1][z1] == 0 {
+                            // creates vertices
+                            positions.push([ x, y, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                            positions.push([ x, y, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                            positions.push([ x + 1.0, y, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                            positions.push([ x + 1.0, y, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                            // creates indices
+                            let positions_len = positions.len() - 4;
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 2) as u32 );
+                            indices.push( (positions_len + 1) as u32 );
+
+
+                            indices.push( (positions_len + 3) as u32 );
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 2) as u32 );
+                        }
                         
+                    } else {
                         // creates vertices
                         positions.push([ x, y, z ]);
                         normals.push([ world_x, world_y, world_z ]);
@@ -256,12 +286,40 @@ pub fn create_chunk_mesh(
                         indices.push( (positions_len + 3) as u32 );
                         indices.push( (positions_len + 1) as u32 );
                         indices.push( (positions_len + 2) as u32 );
-
                     }
 
                     //above plane
-                    if y as usize <= 32 {
+                    if y as usize <= 30 {
+                        if world.chunk_index[chunk].index[x1][y1 + 1][z1] == 0 {
+                            // creates vertices
+                            positions.push([ x, y + 1.0, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                            positions.push([ x, y + 1.0, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                            positions.push([ x + 1.0, y + 1.0, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                            positions.push([ x + 1.0, y + 1.0, z + 1.0] );
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                            // creates indices
+                            let positions_len = positions.len() - 4;
+                            indices.push( (positions_len + 2) as u32 );
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+                        }
                         
+                    } else {
                         // creates vertices
                         positions.push([ x, y + 1.0, z ]);
                         normals.push([ world_x, world_y, world_z ]);
@@ -291,8 +349,36 @@ pub fn create_chunk_mesh(
                     }
 
                     //left plane
-                    if z as usize >= 0 {
-                        
+                    if z as usize >= 1 {
+                        if world.chunk_index[chunk].index[x1][y1][z1 - 1] == 0 {
+                            // creates vertices
+                            positions.push([ x, y, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                            positions.push([ x + 1.0, y, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                            positions.push([ x, y + 1.0, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                            positions.push([ x + 1.0, y + 1.0, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                            // creates indices
+                            let positions_len = positions.len() - 4;
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 2) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+                        }
+                    } else {
                         // creates vertices
                         positions.push([ x, y, z ]);
                         normals.push([ world_x, world_y, world_z ]);
@@ -319,11 +405,39 @@ pub fn create_chunk_mesh(
                         indices.push( (positions_len + 0) as u32 );
                         indices.push( (positions_len + 2) as u32 );
                         indices.push( (positions_len + 3) as u32 );
-                    } 
+                    }
 
                     //right plane
-                    if z as usize <= 32 {
-                        
+                    if z as usize <= 30 {
+                        if world.chunk_index[chunk].index[x1][y1][z1 + 1] == 0 {
+                            // creates vertices
+                            positions.push([ x, y, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                            positions.push([ x + 1.0, y, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                            positions.push([ x, y + 1.0, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                            positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                            // creates indices
+                            let positions_len = positions.len() - 4;
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+
+                            indices.push( (positions_len + 2) as u32 );
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+                        }
+                    } else {
                         // creates vertices
                         positions.push([ x, y, z + 1.0 ]);
                         normals.push([ world_x, world_y, world_z ]);
@@ -354,8 +468,36 @@ pub fn create_chunk_mesh(
 
                     
                     //front plane
-                    if x as usize >= 0 {
-                        
+                    if x as usize >= 1 {
+                        if world.chunk_index[chunk].index[x1 - 1][y1][z1] == 0 {
+                            // creates vertices
+                            positions.push([ x, y, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                            positions.push([ x, y, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                            positions.push([ x, y + 1.0, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                            positions.push([ x, y + 1.0, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+
+                            // creates indices
+                            let positions_len = positions.len() - 4;
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 2) as u32 );
+
+                            indices.push( (positions_len + 2) as u32 );
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 3) as u32 ); 
+                        }
+                    } else {
                         // creates vertices
                         positions.push([ x, y, z ]);
                         normals.push([ world_x, world_y, world_z ]);
@@ -382,11 +524,39 @@ pub fn create_chunk_mesh(
                         indices.push( (positions_len + 2) as u32 );
                         indices.push( (positions_len + 1) as u32 );
                         indices.push( (positions_len + 3) as u32 ); 
-                    } 
+                    }
                     
                     //back plane
-                    if x as usize <= 32 {
-                        
+                    if x as usize <= 30 {
+                        if world.chunk_index[chunk].index[x1 + 1][y1][z1] == 0 {
+                            // creates vertices
+                            positions.push([ x + 1.0, y, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 0.0 ]);
+
+                            positions.push([ x + 1.0, y, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 0.0 ]);
+
+                            positions.push([ x + 1.0, y + 1.0, z ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ block as f32 / 256.0, 1.0 ]);
+
+                            positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
+                            normals.push([ world_x, world_y, world_z ]);
+                            uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
+                            
+                            // creates indices
+                            let positions_len = positions.len() - 4;
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 0) as u32 );
+                            indices.push( (positions_len + 2) as u32 );
+
+                            indices.push( (positions_len + 1) as u32 );
+                            indices.push( (positions_len + 2) as u32 );
+                            indices.push( (positions_len + 3) as u32 );
+                        }
+                    } else {
                         // creates vertices
                         positions.push([ x + 1.0, y, z ]);
                         normals.push([ world_x, world_y, world_z ]);
@@ -403,7 +573,7 @@ pub fn create_chunk_mesh(
                         positions.push([ x + 1.0, y + 1.0, z + 1.0 ]);
                         normals.push([ world_x, world_y, world_z ]);
                         uvs.push([ (block as f32 / 256.0) + 1.0 / 256.0, 1.0 ]);
-                        
+                            
                         // creates indices
                         let positions_len = positions.len() - 4;
                         indices.push( (positions_len + 1) as u32 );
