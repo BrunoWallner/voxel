@@ -1,7 +1,4 @@
 use bevy::prelude::*;
-use bevy_flycam::NoCameraPlayerPlugin;
-use bevy_flycam::FlyCam;
-use bevy_flycam::MovementSettings;
 
 pub struct Materials {
     pub blocks: Handle<StandardMaterial>,
@@ -9,6 +6,9 @@ pub struct Materials {
 
 mod chunk;
 mod controll;
+mod player_input;
+
+use player_input::*;
 
 pub struct Camera;
 pub struct Light;
@@ -17,9 +17,10 @@ pub struct Light;
 fn main() {
     App::build()
         .add_plugins(DefaultPlugins)
+
         .add_plugin(NoCameraPlayerPlugin)
         .insert_resource(MovementSettings {
-            sensitivity: 0.00010, // default: 0.00012
+            sensitivity: 0.025, // default: 0.00012
             speed: 25.0, // default: 12.0
         })
 
@@ -45,7 +46,7 @@ fn setup(
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     // Window settings
-    commands.insert_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, ..Default::default()});
+    commands.insert_resource(WindowDescriptor {title: "Voxel!".to_string(), width: 1200.0, height: 800.0, vsync: false, ..Default::default()});
         
     // Clear Color    
     commands.insert_resource(ClearColor(Color::rgb(0.0, 0.0, 0.0)));
@@ -53,6 +54,12 @@ fn setup(
     // Light
     commands.spawn_bundle(LightBundle {
         transform: Transform::from_translation(Vec3::new(0.0, 65.0, 0.0)),
+        light: bevy::pbr::Light {
+            color: Color::rgb(1.0, 1.0, 1.0),
+            fov: 360.0,
+            range: 10000.0,
+            ..Default::default()
+        },
         ..Default::default()
     })
     .insert(Light);
@@ -60,8 +67,7 @@ fn setup(
 
     // spawns player
     commands.spawn_bundle(PerspectiveCameraBundle {
-            transform: Transform::from_xyz(-75.0, 75.0, -75.0)
-                .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
+            transform: Transform::from_xyz(0.0, 65.0, 0.0),
             ..Default::default()
         })
         .insert(Camera)

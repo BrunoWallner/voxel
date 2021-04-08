@@ -8,6 +8,5 @@ edition = "2018"
 
 [dependencies]
 bevy = "0.5.0"
-bevy_flycam = "*"
 rand = "0.8.0"
 noise = "0.7.0"

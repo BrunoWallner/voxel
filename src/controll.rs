@@ -4,10 +4,11 @@ pub struct Builder {
     x: f32,
     y: f32,
     z: f32,
+    distance: f32,
 }
 impl Builder {
     pub fn new(x: f32, y: f32, z: f32) -> Self {
-        Builder {x: x, y: y, z: z}
+        Builder {x: x, y: y, z: z, distance: 5.0}
     }
 
     pub fn chpos(&mut self, direction: [f32; 3]) {
@@ -28,45 +29,29 @@ pub fn build(
     builder: Query<&Builder, With<Builder>>,
     mut builder_indicator: Query<&mut Transform, With<BuilderIndicator>>,
     mut chunk_mesh: Query<(Entity, &mut crate::chunk::ChunkMesh), With<crate::chunk::ChunkMesh>>,
-    input: Res<Input<KeyCode>>,
+    input: Res<Input<MouseButton>>,
     mut commands: Commands,
     materials: Res<crate::Materials>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
     let mut builder_position: [i32; 3] = [0, 0, 0];
+    let mut builder_raw_position: [f32; 3] = [0.0, 0.0, 0.0];
 
     for builder in builder.iter() {
         let old_pos = builder.get_position();
-        builder_position = [old_pos[0] as i32, old_pos[1] as i32, old_pos[2] as i32];
+        builder_position = [(old_pos[0] - 1.0) as i32, (old_pos[1] - 0.25) as i32, (old_pos[2] - 1.0) as i32];
+
+        // updates position
+        builder_raw_position = [old_pos[0], old_pos[1], old_pos[2]];
     }
 
     let builder_chunk_position: [i32; 3] = crate::chunk::get_chunk_coordinates_from_position(builder_position);
 
     let mut chunk_position: usize = 0;
 
-    let mut x_chunk_position: [usize; 2] = [0, 0];
-    let mut y_chunk_position: [usize; 2] = [0, 0];
-    let mut z_chunk_position: [usize; 2] = [0, 0];
-
     for mut world in world.iter_mut() {
         chunk_position = 
             crate::chunk::get_chunk_index( builder_chunk_position, &mut world ); 
-
-        // neighbour chunk positions
-        x_chunk_position[0] = 
-            crate::chunk::get_chunk_index( [builder_chunk_position[0]-1, builder_chunk_position[1], builder_chunk_position[2]], &mut world );
-        x_chunk_position[1] = 
-            crate::chunk::get_chunk_index( [builder_chunk_position[0]+1, builder_chunk_position[1], builder_chunk_position[2]], &mut world );
-
-        y_chunk_position[0] = 
-            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1]-1, builder_chunk_position[2]], &mut world );
-        y_chunk_position[1] = 
-            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1]+1, builder_chunk_position[2]], &mut world );
-
-        z_chunk_position[0] = 
-            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]-1], &mut world );
-        z_chunk_position[1] = 
-            crate::chunk::get_chunk_index( [builder_chunk_position[0], builder_chunk_position[1], builder_chunk_position[2]+1], &mut world );
     }
 
     let mut blocks: [usize; 3] = [0, 0, 0];
@@ -75,17 +60,17 @@ pub fn build(
         blocks[i] = ( (builder_position[i]) - builder_chunk_position[i] *32 ) as usize
     }
 
-    // update position of builder_indicator
     for mut builder_indicator in builder_indicator.iter_mut() {
-        builder_indicator.translation.x = builder_position[0] as f32 + 0.5;
-        builder_indicator.translation.y = builder_position[1] as f32 + 0.5;
-        builder_indicator.translation.z = builder_position[2] as f32 + 0.5;
+        builder_indicator.translation.x = builder_raw_position[0];
+        builder_indicator.translation.y = builder_raw_position[1];
+        builder_indicator.translation.z = builder_raw_position[2];
     }
+
 
     let mut edited: bool = false;
 
     // places block
-    if input.pressed(KeyCode::E) {
+    if input.pressed(MouseButton::Right) {
         for mut world in world.iter_mut() {
 
             // places block in chunk index
@@ -97,7 +82,7 @@ pub fn build(
     }
 
     // destroys block
-    if input.pressed(KeyCode::Q) {
+    if input.pressed(MouseButton::Left) {
         for mut world in world.iter_mut() {
 
             // places block in chunk index         
@@ -148,44 +133,29 @@ pub fn build(
 pub fn builder_movement(
     input: Res<Input<KeyCode>>,
     mut builder: Query<&mut Builder, With<Builder>>,
-    time: Res<Time>,
 ) {
     for mut builder in builder.iter_mut() {
-
-        let speed: f32 = 10.0 * time.delta_seconds();
-
-        if input.pressed(KeyCode::Left) {
-            builder.chpos( [0.0, 0.0, -speed] );
+        if input.just_pressed(KeyCode::Up) {
+            builder.distance += 1.0;
         }
-        if input.pressed(KeyCode::Up) {
-            builder.chpos( [speed, 0.0, 0.0] );
-        }
-        if input.pressed(KeyCode::Right) {
-            builder.chpos( [0.0, 0.0, speed] );
-        }
-        if input.pressed(KeyCode::Down) {
-            builder.chpos( [-speed, 0.0, 0.0] );
-        }
-
-        if input.pressed(KeyCode::Numpad0) {
-            builder.chpos( [0.0, -speed, 0.0] );
-        }
-        if input.pressed(KeyCode::RControl) {
-            builder.chpos( [0.0, speed, 0.0] );
+        if input.just_pressed(KeyCode::Down) {
+            builder.distance -= 1.0;
         }
     }
 }
 
 pub fn movement(
-    mut light: Query<&mut Transform, With<crate::Light>>,
-    builder: Query<&Builder, With<Builder>>,
+    camera: Query<&Transform, With<crate::Camera>>,
+    mut builder: Query<&mut Builder, With<Builder>>,
 ) {
-    for mut light in light.iter_mut() {
-        for builder in builder.iter() {
-            light.translation.x = builder.get_position()[0] as i32 as f32 + 0.5;
-            light.translation.y = builder.get_position()[1] as i32 as f32 + 0.5;
-            light.translation.z = builder.get_position()[2] as i32 as f32 + 0.5;
+    for mut builder in builder.iter_mut() {
+        for camera in camera.iter() {
+            let local_z = camera.local_z();
+            let forward = -Vec3::new(local_z.x, local_z.y, local_z.z);
+
+            builder.x = camera.translation.x + forward[0] * builder.distance;
+            builder.y = camera.translation.y + forward[1] * builder.distance;
+            builder.z = camera.translation.z + forward[2] * builder.distance;
         }
-        
     }
 }
