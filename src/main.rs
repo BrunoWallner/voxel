@@ -1,4 +1,7 @@
 use bevy::prelude::*;
+use bevy_flycam::NoCameraPlayerPlugin;
+use bevy_flycam::FlyCam;
+use bevy_flycam::MovementSettings;
 
 pub struct Materials {
     pub blocks: Handle<StandardMaterial>,
@@ -14,6 +17,11 @@ pub struct Light;
 fn main() {
     App::build()
         .add_plugins(DefaultPlugins)
+        .add_plugin(NoCameraPlayerPlugin)
+        .insert_resource(MovementSettings {
+            sensitivity: 0.00010, // default: 0.00012
+            speed: 25.0, // default: 12.0
+        })
 
         .add_startup_system(setup.system())
         .add_startup_system(chunk::spawn_world.system())
@@ -23,7 +31,7 @@ fn main() {
         .add_startup_stage("render", SystemStage::single(chunk::render_chunk.system()))
 
         .add_system(controll::build.system())
-        .add_system(controll::movement.system())
+        .add_system(controll::movement.system()) // syncs light position to builder
         .add_system(controll::builder_movement.system())
 
         .run();
@@ -44,13 +52,11 @@ fn setup(
         
     // Light
     commands.spawn_bundle(LightBundle {
-        transform: Transform::from_matrix(Mat4::from_rotation_translation(
-            Quat::from_xyzw(0.0, 0.0, 0.0, 0.0).normalize(),
-            Vec3::new(0.0, 1000000000.0, 0.0),
-        )),
+        transform: Transform::from_translation(Vec3::new(0.0, 65.0, 0.0)),
         ..Default::default()
     })
     .insert(Light);
+
 
     // spawns player
     commands.spawn_bundle(PerspectiveCameraBundle {
@@ -58,13 +64,16 @@ fn setup(
                 .looking_at(Vec3::new(0.0, 0.0, 0.0), Vec3::Y),
             ..Default::default()
         })
-        .insert(Camera);
+        .insert(Camera)
+        .insert(FlyCam);
 
     let block_texture_handle = asset_server.load("textures/blocks.png");
 
     let blocks = materials.add(StandardMaterial { 
         base_color: Color::rgba(1.0, 1.0, 1.0, 1.0), 
         base_color_texture: Some(block_texture_handle.clone()), 
+        roughness: 2.5,
+        metallic: 0.1,
         ..Default::default() });
 
     commands.insert_resource(Materials {
@@ -76,7 +85,9 @@ fn setup(
 
     let builder_texture = materials.add(StandardMaterial { 
         base_color: Color::rgba(1.0, 1.0, 1.0, 1.0), 
-        base_color_texture: Some(builder_texture_handle.clone()), 
+        base_color_texture: Some(builder_texture_handle.clone()),
+        roughness: 0.5,
+        metallic: 5.0,
         ..Default::default() });
 
     commands.spawn_bundle(PbrBundle {

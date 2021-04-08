@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use crate::Camera;
 
 pub struct Builder {
     x: f32,
@@ -178,27 +177,15 @@ pub fn builder_movement(
 }
 
 pub fn movement(
-    mut camera: Query<&mut Transform, With<Camera>>,
-    input: Res<Input<KeyCode>>,
-    time: Res<Time>,
+    mut light: Query<&mut Transform, With<crate::Light>>,
+    builder: Query<&Builder, With<Builder>>,
 ) {
-    for mut camera in camera.iter_mut() {
-        let speed: f32 = 50.0 * time.delta_seconds(); 
-        if input.pressed(KeyCode::W) {
-            camera.translation.z+=speed;
-            camera.translation.x+=speed;
+    for mut light in light.iter_mut() {
+        for builder in builder.iter() {
+            light.translation.x = builder.get_position()[0] as i32 as f32 + 0.5;
+            light.translation.y = builder.get_position()[1] as i32 as f32 + 0.5;
+            light.translation.z = builder.get_position()[2] as i32 as f32 + 0.5;
         }
-        if input.pressed(KeyCode::A) {
-            camera.translation.z-=speed / 2.0;
-            camera.translation.x+=speed / 2.0;
-        }
-        if input.pressed(KeyCode::S) {
-            camera.translation.z-=speed;
-            camera.translation.x-=speed;
-        }
-        if input.pressed(KeyCode::D) {
-            camera.translation.z+=speed / 2.0;
-            camera.translation.x-=speed / 2.0;
-        }
+        
     }
 }
